@@ -905,21 +905,20 @@
             @endif
             @if(auth()->check() && auth()->user()->hasRole('Admin'))
             <li class="nav-item fade-in" style="animation-delay: 0.4s">
-                <a class="nav-link {{ request()->is('schedules/create') ? 'active' : '' }}" href="{{ route('schedules.create') }}">
-                    <i class="fas fa-calendar-plus"></i>
-                    إضافة جدول دراسي
+                <a class="nav-link {{ request()->is('admin/schedules*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
+                    <i class="fas fa-calendar-alt"></i>
+                    إدارة الجداول الدراسية
                 </a>
-                                </li>
-                            @endif
-
+            </li>
+            @endif
             @if(auth()->check() && auth()->user()->hasRole('Student'))
             <li class="nav-item fade-in" style="animation-delay: 0.4s">
-                <a class="nav-link {{ request()->is('schedules') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
+                <a class="nav-link {{ request()->is('student/schedule*') ? 'active' : '' }}" href="{{ route('student.schedule') }}">
                     <i class="fas fa-calendar"></i>
                     جدولي الدراسي
                 </a>
-                                </li>
-                            @endif
+            </li>
+            @endif
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
                 <a class="nav-link" href="#">
                     <i class="fas fa-chart-bar"></i>

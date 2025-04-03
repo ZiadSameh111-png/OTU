@@ -25,20 +25,24 @@ Auth::routes();
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::redirect('/home', '/dashboard');
 
-// User management routes
+// Routes requiring authentication
 Route::middleware(['auth'])->group(function () {
     // User management routes - only accessible by admin
     Route::middleware(['role:Admin'])->group(function () {
         Route::resource('users', App\Http\Controllers\UserController::class);
         
-        // Schedule creation routes - only accessible by admin
-        Route::get('/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
-        Route::post('/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
+        // Schedule management routes - only accessible by admin
+        Route::get('/admin/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
+        Route::get('/admin/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
+        Route::post('/admin/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
+        Route::get('/admin/schedules/{schedule}/edit', [ScheduleController::class, 'edit'])->name('schedules.edit');
+        Route::put('/admin/schedules/{schedule}', [ScheduleController::class, 'update'])->name('schedules.update');
+        Route::delete('/admin/schedules/{schedule}', [ScheduleController::class, 'destroy'])->name('schedules.destroy');
     });
     
     // Schedule view routes - accessible by students
     Route::middleware(['role:Student'])->group(function () {
-        Route::get('/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
+        Route::get('/student/schedule', [ScheduleController::class, 'studentSchedule'])->name('student.schedule');
     });
     
     // Course routes - accessible by admin and teachers

@@ -27,15 +27,19 @@ class ScheduleController extends Controller
      */
     public function index()
     {
-        // Check if user has Student role
-        if (!Auth::user()->hasRole('Student')) {
+        // Check user role
+        if (Auth::user()->hasRole('Admin')) {
+            // Get all schedules for admin view
+            $schedules = Schedule::with(['course', 'student'])->get();
+            return view('admin.schedules.index', compact('schedules'));
+        } else if (Auth::user()->hasRole('Student')) {
+            // Get the logged-in student's schedules
+            $schedules = Auth::user()->schedules()->with('course')->get();
+            return view('schedules.index', compact('schedules'));
+        } else {
+            // Redirect other roles
             return redirect()->route('dashboard')->with('error', 'You do not have permission to view schedules.');
         }
-
-        // Get the logged-in student's schedules
-        $schedules = Auth::user()->schedules()->with('course')->get();
-        
-        return view('schedules.index', compact('schedules'));
     }
 
     /**
@@ -117,7 +121,20 @@ class ScheduleController extends Controller
      */
     public function edit(Schedule $schedule)
     {
-        //
+        // Check if user has Admin role
+        if (!Auth::user()->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to edit schedules.');
+        }
+
+        // Get all courses and students for the dropdown
+        $courses = Course::all();
+        $students = User::whereHas('roles', function($query) {
+            $query->where('name', 'Student');
+        })->get();
+        
+        $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        
+        return view('admin.schedules.edit', compact('schedule', 'courses', 'students', 'days'));
     }
 
     /**
@@ -129,7 +146,33 @@ class ScheduleController extends Controller
      */
     public function update(Request $request, Schedule $schedule)
     {
-        //
+        // Check if user has Admin role
+        if (!Auth::user()->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to update schedules.');
+        }
+
+        // Validate the request data
+        $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'student_id' => 'required|exists:users,id',
+            'day' => 'required|string',
+            'start_time' => 'required',
+            'end_time' => 'required|after:start_time',
+            'room' => 'nullable|string',
+        ]);
+
+        // Update the schedule
+        $schedule->update([
+            'course_id' => $request->course_id,
+            'student_id' => $request->student_id,
+            'day' => $request->day,
+            'start_time' => $request->start_time,
+            'end_time' => $request->end_time,
+            'room' => $request->room,
+        ]);
+
+        return redirect()->route('schedules.index')
+            ->with('success', 'Schedule updated successfully.');
     }
 
     /**
@@ -140,6 +183,33 @@ class ScheduleController extends Controller
      */
     public function destroy(Schedule $schedule)
     {
-        //
+        // Check if user has Admin role
+        if (!Auth::user()->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to delete schedules.');
+        }
+
+        // Delete the schedule
+        $schedule->delete();
+
+        return redirect()->route('schedules.index')
+            ->with('success', 'Schedule deleted successfully.');
+    }
+
+    /**
+     * Display the schedules for the logged-in student.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function studentSchedule()
+    {
+        // Check if user has Student role
+        if (!Auth::user()->hasRole('Student')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to view this page.');
+        }
+
+        // Get the logged-in student's schedules
+        $schedules = Auth::user()->schedules()->with('course')->get();
+        
+        return view('student.schedule', compact('schedules'));
     }
 }
