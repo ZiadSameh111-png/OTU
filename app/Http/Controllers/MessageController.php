@@ -184,13 +184,23 @@ class MessageController extends Controller
      */
     public function adminIndex()
     {
-        $messages = Message::where('receiver_id', Auth::id())
-                        ->orWhere('sender_id', Auth::id())
+        $messages = Message::where('sender_id', Auth::id())
                         ->with(['sender', 'receiver'])
                         ->orderBy('created_at', 'desc')
                         ->paginate(10);
         
-        return view('admin.messages.index', compact('messages'));
+        // جلب قوائم المستخدمين للإضافة في نموذج إرسال الرسائل
+        $students = User::whereHas('roles', function($query) {
+            $query->where('name', 'Student');
+        })->get();
+        
+        $teachers = User::whereHas('roles', function($query) {
+            $query->where('name', 'Teacher');
+        })->get();
+        
+        $groups = \App\Models\Group::where('active', true)->get();
+        
+        return view('admin.messages.index', compact('messages', 'students', 'teachers', 'groups'));
     }
 
     /**
@@ -218,6 +228,67 @@ class MessageController extends Controller
     }
 
     /**
+     * حفظ رسالة جديدة من المسؤول
+     */
+    public function adminStore(Request $request)
+    {
+        $request->validate([
+            'subject' => 'required|string|max:255',
+            'content' => 'required|string',
+            'recipient_type' => 'required|in:student,teacher,group',
+        ]);
+
+        // تحديد المستلم بناءً على النوع
+        $receiverId = null;
+        
+        if ($request->recipient_type == 'student') {
+            $request->validate(['student_id' => 'required|exists:users,id']);
+            $receiverId = $request->student_id;
+        } elseif ($request->recipient_type == 'teacher') {
+            $request->validate(['teacher_id' => 'required|exists:users,id']);
+            $receiverId = $request->teacher_id;
+        } elseif ($request->recipient_type == 'group') {
+            $request->validate(['group_id' => 'required|exists:groups,id']);
+            
+            // إرسال لكل طلاب المجموعة
+            $group = \App\Models\Group::with('students')->findOrFail($request->group_id);
+            
+            // إذا كانت المجموعة فارغة
+            if ($group->students->isEmpty()) {
+                return redirect()->back()->with('error', 'لا يوجد طلاب في هذه المجموعة');
+            }
+            
+            // إرسال الرسالة لكل طالب في المجموعة
+            foreach ($group->students as $student) {
+                $message = new Message();
+                $message->subject = $request->subject;
+                $message->body = $request->content;
+                $message->sender_id = Auth::id();
+                $message->receiver_id = $student->id;
+                $message->is_read = false;
+                $message->save();
+            }
+            
+            return redirect()->back()->with('success', 'تم إرسال الرسالة لجميع طلاب المجموعة بنجاح');
+        }
+        
+        // إرسال الرسالة للمستلم الفردي
+        if ($receiverId) {
+            $message = new Message();
+            $message->subject = $request->subject;
+            $message->body = $request->content;
+            $message->sender_id = Auth::id();
+            $message->receiver_id = $receiverId;
+            $message->is_read = false;
+            $message->save();
+            
+            return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
+        }
+        
+        return redirect()->back()->with('error', 'حدث خطأ أثناء إرسال الرسالة');
+    }
+
+    /**
      * قائمة رسائل المعلم
      */
     public function teacherIndex()
@@ -240,8 +311,10 @@ class MessageController extends Controller
      */
     public function teacherCreate()
     {
-        $users = User::where('id', '!=', Auth::id())->get();
-        return view('teacher.messages.create', compact('users'));
+        // الحصول على قائمة الطلاب فقط
+        $students = User::role('Student')->get();
+        
+        return view('teacher.messages.create', compact('students'));
     }
 
     /**
@@ -305,5 +378,43 @@ class MessageController extends Controller
         }
         
         return view('student.messages.show', compact('message'));
+    }
+
+    /**
+     * حفظ رسالة جديدة من المعلم
+     */
+    public function teacherStore(Request $request)
+    {
+        // تسجيل بيانات الطلب للتصحيح
+        \Log::info('Teacher message submission:', $request->all());
+        
+        $request->validate([
+            'subject' => 'required|string|max:255',
+            'content' => 'required|string',
+            'recipient_id' => 'required|exists:users,id',
+        ]);
+        
+        try {
+            // إنشاء رسالة جديدة
+            $message = new Message();
+            $message->subject = $request->subject;
+            $message->body = $request->content; // تخزين المحتوى في حقل body
+            $message->sender_id = Auth::id();
+            $message->receiver_id = $request->recipient_id; // تعيين receiver_id من recipient_id
+            $message->is_read = false;
+            $message->save();
+            
+            \Log::info('Message saved successfully with ID: ' . $message->id);
+            
+            return redirect()->route('teacher.messages')
+                ->with('success', 'تم إرسال الرسالة بنجاح');
+        } catch (\Exception $e) {
+            // تسجيل الخطأ
+            \Log::error('Error saving teacher message: ' . $e->getMessage());
+            
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء إرسال الرسالة: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 }

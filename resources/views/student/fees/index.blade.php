@@ -74,17 +74,17 @@
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="progress flex-grow-1 me-2" style="height: 6px;">
-                                                        <div class="progress-bar bg-{{ $statusClass }}" role="progressbar" style="width: {{ ($paid / $fee->amount) * 100 }}%"></div>
+                                                        <div class="progress-bar bg-{{ $statusClass }}" role="progressbar" style="width: {{ $fee->amount > 0 ? ($paid / $fee->amount) * 100 : 0 }}%"></div>
                                                     </div>
                                                     <span class="badge bg-{{ $statusClass }}">{{ $status }}</span>
                                                 </div>
                                             </td>
                                             <td>
-                                                <a href="{{ route('student.fees.show', $fee->id) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ route('fees.show', $fee->id) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
                                                 @if($remaining > 0)
-                                                    <a href="{{ route('student.fees.pay', $fee->id) }}" class="btn btn-sm btn-primary">
+                                                    <a href="{{ route('fees.pay', $fee->id) }}" class="btn btn-sm btn-primary">
                                                         <i class="fas fa-money-bill-wave"></i>
                                                     </a>
                                                 @endif

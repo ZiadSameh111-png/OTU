@@ -5,34 +5,34 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class FeePayment extends Model
+class PaymentTransaction extends Model
 {
     use HasFactory;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array
+     */
     protected $fillable = [
         'user_id',
         'fee_id',
         'amount',
         'payment_method',
-        'transaction_id',
-        'payment_date',
         'status',
+        'transaction_id',
         'description',
-        'notes',
-        'admin_id'
-    ];
-
-    protected $casts = [
-        'payment_date' => 'datetime',
+        'paid_at'
     ];
 
     /**
-     * العلاقة مع السجل الرئيسي للرسوم
+     * The attributes that should be cast.
+     *
+     * @var array
      */
-    public function fee()
-    {
-        return $this->belongsTo(Fee::class);
-    }
+    protected $casts = [
+        'paid_at' => 'datetime',
+    ];
 
     /**
      * العلاقة مع المستخدم الذي قام بالدفع
@@ -43,37 +43,27 @@ class FeePayment extends Model
     }
 
     /**
-     * العلاقة مع المسؤول الذي سجل الدفعة
+     * العلاقة مع الرسوم المرتبطة بالمعاملة
      */
-    public function admin()
+    public function fee()
     {
-        return $this->belongsTo(User::class, 'admin_id');
+        return $this->belongsTo(Fee::class);
     }
 
     /**
-     * تحديث حالة السجل الرئيسي للرسوم بعد عملية الدفع
-     */
-    public function updateFeeStatus()
-    {
-        if ($this->fee) {
-            $this->fee->updateBalances();
-        }
-    }
-
-    /**
-     * الحصول على اسم حالة الدفع بالعربية
+     * الحصول على اسم حالة المعاملة بالعربية
      */
     public function getStatusNameAttribute()
     {
         switch ($this->status) {
             case 'completed':
-                return 'مكتمل';
+                return 'مكتملة';
             case 'pending':
                 return 'قيد المعالجة';
             case 'failed':
-                return 'فاشل';
+                return 'فاشلة';
             case 'cancelled':
-                return 'ملغي';
+                return 'ملغية';
             default:
                 return $this->status;
         }
@@ -85,18 +75,14 @@ class FeePayment extends Model
     public function getPaymentMethodNameAttribute()
     {
         switch ($this->payment_method) {
-            case 'cash':
-                return 'نقدي';
-            case 'bank_transfer':
-                return 'تحويل بنكي';
             case 'credit_card':
                 return 'بطاقة ائتمان';
-            case 'debit_card':
-                return 'بطاقة خصم';
-            case 'check':
-                return 'شيك';
+            case 'bank_transfer':
+                return 'تحويل بنكي';
+            case 'cash':
+                return 'نقدي';
             default:
                 return $this->payment_method;
         }
     }
-} 
+}

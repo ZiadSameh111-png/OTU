@@ -11,6 +11,7 @@ class TeacherAttendance extends Model
 
     protected $fillable = [
         'user_id',
+        'teacher_id',
         'attendance_date',
         'check_in',
         'check_out',
@@ -30,7 +31,11 @@ class TeacherAttendance extends Model
      */
     public function teacher()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        // Try teacher_id first, fall back to user_id if needed
+        return $this->belongsTo(User::class, 'teacher_id')
+            ->withDefault(function() {
+                return $this->belongsTo(User::class, 'user_id')->first();
+            });
     }
 
     /**

@@ -216,9 +216,11 @@ class FeeController extends Controller
     public function studentIndex()
     {
         $user = Auth::user();
-        $fees = Fee::whereHas('groups', function ($query) use ($user) {
-            $query->where('group_id', $user->group_id);
-        })->orWhere('applies_to_all', true)
+        // Temporary fix to avoid using the fee_group table
+        $fees = Fee::where(function($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->orWhere('applies_to_all', true);
+        })
         ->with('payments')
         ->get();
         
@@ -241,10 +243,11 @@ class FeeController extends Controller
         $user = Auth::user();
         
         // التحقق من أن الرسوم تنطبق على الطالب
-        $applies = $fee->applies_to_all || $fee->groups->contains('id', $user->group_id);
+        // Temporary fix to avoid using the fee_group table
+        $applies = $fee->applies_to_all || $fee->user_id == $user->id;
         
         if (!$applies) {
-            return redirect()->route('fees')
+            return redirect()->route('student.fees')
                             ->with('error', 'لا يمكنك الوصول إلى هذه الرسوم.');
         }
         
@@ -276,10 +279,11 @@ class FeeController extends Controller
         $user = Auth::user();
         
         // التحقق من أن الرسوم تنطبق على الطالب
-        $applies = $fee->applies_to_all || $fee->groups->contains('id', $user->group_id);
+        // Temporary fix to avoid using the fee_group table
+        $applies = $fee->applies_to_all || $fee->user_id == $user->id;
         
         if (!$applies) {
-            return redirect()->route('fees')
+            return redirect()->route('student.fees')
                             ->with('error', 'لا يمكنك الوصول إلى هذه الرسوم.');
         }
         
@@ -347,9 +351,11 @@ class FeeController extends Controller
     {
         $user = Auth::user();
         
-        $fees = Fee::whereHas('groups', function ($query) use ($user) {
-            $query->where('group_id', $user->group_id);
-        })->orWhere('applies_to_all', true)
+        // Temporary fix to avoid using the fee_group table
+        $fees = Fee::where(function($query) use ($user) {
+            $query->where('user_id', $user->id)
+                  ->orWhere('applies_to_all', true);
+        })
         ->with('payments')
         ->get();
         
@@ -495,8 +501,8 @@ class FeeController extends Controller
             DB::rollBack();
             Log::error('خطأ في معالجة نتيجة الدفع: ' . $e->getMessage());
             
-            return redirect()->route('fees')
-                            ->with('error', 'حدث خطأ أثناء معالجة نتيجة الدفع.');
+            return redirect()->route('student.fees')
+                            ->with('error', 'حدث خطأ أثناء معالجة نتيجة الدفع. يرجى المحاولة مرة أخرى لاحقاً.');
         }
     }
     

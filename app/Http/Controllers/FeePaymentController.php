@@ -79,9 +79,12 @@ class FeePaymentController extends Controller
             // إنشاء سجل الدفعة
             $payment = FeePayment::create([
                 'fee_id' => $fee->id,
+                'user_id' => $fee->user_id,
                 'amount' => $request->amount,
                 'payment_date' => $request->payment_date,
                 'admin_id' => Auth::id(),
+                'payment_method' => 'cash',
+                'status' => 'completed',
             ]);
 
             // تحديث إجمالي المبلغ المدفوع في سجل الرسوم

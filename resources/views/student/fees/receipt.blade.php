@@ -91,7 +91,7 @@
                 <button class="btn btn-primary me-2" onclick="window.print()">
                     <i class="fas fa-print me-1"></i> طباعة الإيصال
                 </button>
-                <a href="{{ route('fees') }}" class="btn btn-secondary">
+                <a href="{{ route('student.fees') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left me-1"></i> العودة للرسوم
                 </a>
             </div>

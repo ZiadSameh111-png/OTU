@@ -67,7 +67,7 @@ Route::middleware(['auth'])->group(function () {
         // Internal messaging routes for admin
         Route::get('/admin/messages', [App\Http\Controllers\MessageController::class, 'adminIndex'])->name('admin.messages');
         Route::get('/admin/messages/create', [App\Http\Controllers\MessageController::class, 'adminCreate'])->name('admin.messages.create');
-        Route::post('/admin/messages', [App\Http\Controllers\MessageController::class, 'store'])->name('admin.messages.store');
+        Route::post('/admin/messages', [App\Http\Controllers\MessageController::class, 'adminStore'])->name('admin.messages.store');
         Route::get('/admin/messages/{message}', [App\Http\Controllers\MessageController::class, 'adminShow'])->name('admin.messages.show');
         Route::post('/admin/messages/toggle-star/{message}', [App\Http\Controllers\MessageController::class, 'toggleStar'])->name('admin.messages.toggle-star');
         Route::post('/admin/messages/mark-read', [App\Http\Controllers\MessageController::class, 'markAsRead'])->name('admin.messages.mark-read');
@@ -137,7 +137,7 @@ Route::middleware(['auth'])->group(function () {
         // Teacher message routes
         Route::get('/teacher/messages', [App\Http\Controllers\MessageController::class, 'teacherIndex'])->name('teacher.messages');
         Route::get('/teacher/messages/create', [App\Http\Controllers\MessageController::class, 'teacherCreate'])->name('teacher.messages.create');
-        Route::post('/teacher/messages', [App\Http\Controllers\MessageController::class, 'store'])->name('teacher.messages.store');
+        Route::post('/teacher/messages', [App\Http\Controllers\MessageController::class, 'teacherStore'])->name('teacher.messages.store');
         Route::get('/teacher/messages/{message}', [App\Http\Controllers\MessageController::class, 'teacherShow'])->name('teacher.messages.show');
         Route::post('/teacher/messages/{message}/read', [App\Http\Controllers\MessageController::class, 'markMessageRead'])->name('teacher.messages.mark-message-read');
         Route::post('/teacher/messages/toggle-star/{message}', [App\Http\Controllers\MessageController::class, 'toggleStar'])->name('teacher.messages.toggle-star');

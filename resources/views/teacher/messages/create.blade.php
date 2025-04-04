@@ -26,6 +26,16 @@
         </div>
     @endif
 
+    @if ($errors->any())
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-md-12">
             <div class="card border-0 shadow-sm">
@@ -35,19 +45,16 @@
                 <div class="card-body">
                     <form action="{{ route('teacher.messages.store') }}" method="POST">
                         @csrf
-                        
+
                         <div class="mb-3">
                             <label for="recipient_id" class="form-label">المستلم</label>
                             <select name="recipient_id" id="recipient_id" class="form-select @error('recipient_id') is-invalid @enderror" required>
                                 <option value="">-- اختر المستلم --</option>
-                                <optgroup label="الإدارة">
-                                    @foreach($users->filter(function($user) { return $user->hasRole('Admin'); }) as $admin)
-                                        <option value="{{ $admin->id }}">{{ $admin->name }} (إداري)</option>
-                                    @endforeach
-                                </optgroup>
                                 <optgroup label="الطلاب">
-                                    @foreach($users->filter(function($user) { return $user->hasRole('Student'); }) as $student)
-                                        <option value="{{ $student->id }}">{{ $student->name }} (طالب)</option>
+                                    @foreach($students as $student)
+                                        <option value="{{ $student->id }}" {{ old('recipient_id') == $student->id ? 'selected' : '' }}>
+                                            {{ $student->name }} (طالب)
+                                        </option>
                                     @endforeach
                                 </optgroup>
                             </select>
@@ -55,7 +62,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="subject" class="form-label">عنوان الرسالة</label>
                             <input type="text" class="form-control @error('subject') is-invalid @enderror" id="subject" name="subject" value="{{ old('subject') }}" required>
@@ -63,7 +70,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        
+
                         <div class="mb-3">
                             <label for="content" class="form-label">محتوى الرسالة</label>
                             <textarea class="form-control @error('content') is-invalid @enderror" id="content" name="content" rows="6" required>{{ old('content') }}</textarea>
@@ -71,7 +78,7 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        
+
                         <div class="text-end">
                             <a href="{{ route('teacher.messages') }}" class="btn btn-secondary">إلغاء</a>
                             <button type="submit" class="btn btn-primary">

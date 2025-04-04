@@ -163,7 +163,7 @@
                     <h5 class="mb-0">
                         <i class="fas fa-money-bill-wave me-2 text-primary"></i>ملخص الرسوم
                     </h5>
-                    <a href="{{ route('fees') }}" class="btn btn-sm btn-outline-primary">التفاصيل</a>
+                    <a href="{{ route('student.fees') }}" class="btn btn-sm btn-outline-primary">التفاصيل</a>
                 </div>
                 <div class="card-body">
                     @if(isset($fee))

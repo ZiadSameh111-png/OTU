@@ -109,7 +109,7 @@
                                             <td>{{ $index + 1 }}</td>
                                             <td>{{ number_format($payment->amount, 2) }} ريال</td>
                                             <td>{{ $payment->payment_date->format('Y-m-d') }}</td>
-                                            <td>{{ $payment->admin->name }}</td>
+                                            <td>{{ $payment->admin ? $payment->admin->name : 'غير محدد' }}</td>
                                             <td>{{ $payment->created_at->format('Y-m-d H:i') }}</td>
                                         </tr>
                                     @endforeach
