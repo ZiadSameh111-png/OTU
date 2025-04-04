@@ -325,7 +325,7 @@
         /* Auth pages brand */
         .auth-brand {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 0.5rem;
         }
 
         .auth-brand i {
@@ -917,6 +917,34 @@
                     إدارة الجداول الدراسية
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.4s">
+                <a class="nav-link {{ request()->is('admin/requests*') ? 'active' : '' }}" href="{{ route('admin.requests') }}">
+                    <i class="fas fa-clipboard-list"></i>
+                    الطلبات الإدارية
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.45s">
+                <a class="nav-link {{ request()->is('admin/attendance*') ? 'active' : '' }}" href="{{ route('admin.attendance') }}">
+                    <i class="fas fa-user-check"></i>
+                    إدارة الحضور
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.5s">
+                <a class="nav-link {{ request()->is('admin/messages*') ? 'active' : '' }}" href="{{ route('admin.messages') }}">
+                    <i class="fas fa-envelope"></i>
+                    الرسائل الداخلية
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.55s">
+                <a class="nav-link {{ request()->is('admin/fees*') ? 'active' : '' }}" href="{{ route('admin.fees') }}">
+                    <i class="fas fa-money-bill-wave"></i>
+                    إدارة الرسوم
+                </a>
+            </li>
             @endif
             
             @if(auth()->check() && auth()->user()->hasRole('Teacher'))
@@ -925,6 +953,21 @@
                 <a class="nav-link {{ request()->routeIs('courses.teacher') || request()->is('teacher/courses*') ? 'active' : '' }}" href="{{ route('courses.teacher') }}">
                     <i class="fas fa-chalkboard-teacher"></i>
                     مقرراتي
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.25s">
+                <a class="nav-link {{ request()->is('teacher/messages*') ? 'active' : '' }}" href="{{ route('teacher.messages') }}">
+                    <i class="fas fa-envelope"></i>
+                    الرسائل
+                    @php
+                        $unreadCount = \App\Models\Message::where('receiver_id', Auth::id())
+                            ->where('is_read', false)
+                            ->count();
+                    @endphp
+                    @if($unreadCount > 0)
+                        <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
+                    @endif
                 </a>
             </li>
             @endif
@@ -939,9 +982,30 @@
             </li>
             
             <li class="nav-item fade-in" style="animation-delay: 0.25s">
-                <a class="nav-link {{ request()->is('student/schedule*') ? 'active' : '' }}" href="{{ route('student.schedule') }}">
-                    <i class="fas fa-calendar"></i>
+                <a class="nav-link {{ request()->routeIs('student.schedule') || request()->is('student/schedule*') ? 'active' : '' }}" href="{{ route('student.schedule') }}">
+                    <i class="fas fa-calendar-alt"></i>
                     جدولي الدراسي
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.3s">
+                <a class="nav-link {{ request()->is('student/requests*') ? 'active' : '' }}" href="{{ route('student.requests') }}">
+                    <i class="fas fa-file-alt"></i>
+                    الطلبات الإدارية
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.35s">
+                <a class="nav-link {{ request()->is('student/messages*') ? 'active' : '' }}" href="{{ route('student.messages') }}">
+                    <i class="fas fa-inbox"></i>
+                    صندوق الوارد
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.4s">
+                <a class="nav-link {{ request()->is('student/fees*') ? 'active' : '' }}" href="{{ route('student.fees') }}">
+                    <i class="fas fa-money-bill-wave"></i>
+                    الرسوم الدراسية
                 </a>
             </li>
             @endif

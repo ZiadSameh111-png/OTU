@@ -127,9 +127,15 @@
         
         roleSelect.addEventListener('change', function() {
             const selectedOption = this.options[this.selectedIndex];
-            const isStudent = selectedOption.text === 'Student';
+            const isStudent = selectedOption.text.trim().toLowerCase() === 'student';
             groupContainer.style.display = isStudent ? 'block' : 'none';
         });
+
+        // تنفيذ الشرط مرة واحدة عند تحميل الصفحة
+        if (roleSelect.options[roleSelect.selectedIndex]) {
+            const selectedRole = roleSelect.options[roleSelect.selectedIndex].text.trim().toLowerCase();
+            groupContainer.style.display = selectedRole === 'student' ? 'block' : 'none';
+        }
 
         // Toggle Password Visibility
         const togglePassword = document.getElementById('togglePassword');

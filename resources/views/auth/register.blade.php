@@ -2,12 +2,8 @@
 
 @section('content')
 <div class="container">
-    <div class="row justify-content-center min-vh-100 align-items-center">
+    <div class="row justify-content-center align-items-center" style="margin-top: 2rem;">
         <div class="col-md-6">
-            <div class="text-center mb-4">
-                <h1 class="display-4 text-white mb-3">{{ config('app.name', 'Laravel') }}</h1>
-                <p class="lead text-white-50 mb-4">Create your account</p>
-            </div>
             <div class="card">
                 <div class="card-body p-4">
                     <form method="POST" action="{{ route('register') }}">

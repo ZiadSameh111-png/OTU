@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use App\Models\Role;
+use Illuminate\Support\Facades\DB;
 
 class RoleSeeder extends Seeder
 {
@@ -15,27 +16,36 @@ class RoleSeeder extends Seeder
      */
     public function run()
     {
-        // Create default roles
+        // مسح البيانات الحالية من جدول الأدوار
+        DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        DB::table('roles')->truncate();
+        DB::statement('SET FOREIGN_KEY_CHECKS=1');
+
+        // إنشاء الأدوار الافتراضية
         $roles = [
             [
                 'name' => 'Admin',
-                'description' => 'System Administrator with full access'
+                'description' => 'مدير النظام مع صلاحيات كاملة',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
                 'name' => 'Teacher',
-                'description' => 'Teacher with access to manage courses and students'
+                'description' => 'معلم مع صلاحيات إدارة المقررات والطلاب',
+                'created_at' => now(),
+                'updated_at' => now(),
             ],
             [
                 'name' => 'Student',
-                'description' => 'Student with access to view courses and submit assignments'
+                'description' => 'طالب مع صلاحيات عرض المقررات وتقديم الواجبات',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]
         ];
 
-        foreach ($roles as $role) {
-            Role::firstOrCreate(
-                ['name' => $role['name']],
-                ['description' => $role['description']]
-            );
-        }
+        // إضافة الأدوار إلى قاعدة البيانات
+        DB::table('roles')->insert($roles);
+
+        $this->command->info('تم إنشاء الأدوار بنجاح');
     }
 }

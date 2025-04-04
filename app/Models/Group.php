@@ -12,32 +12,37 @@ class Group extends Model
     protected $fillable = [
         'name',
         'description',
-        'active',
+        'active'
+    ];
+
+    protected $casts = [
+        'active' => 'boolean',
     ];
 
     /**
-     * Get the students that belong to the group.
+     * العلاقة مع الطلاب المنتمين للمجموعة
      */
     public function students()
     {
-        return $this->hasMany(User::class)->whereHas('roles', function ($query) {
-            $query->where('name', 'Student');
-        });
+        return $this->hasMany(User::class, 'group_id')
+            ->whereHas('roles', function($query) {
+                $query->where('name', 'Student');
+            });
     }
 
     /**
-     * Get the schedules that belong to the group.
+     * العلاقة مع المقررات التي تدرسها المجموعة
+     */
+    public function courses()
+    {
+        return $this->belongsToMany(Course::class);
+    }
+
+    /**
+     * العلاقة مع الجداول الدراسية
      */
     public function schedules()
     {
         return $this->hasMany(Schedule::class);
-    }
-
-    /**
-     * The courses that belong to the group.
-     */
-    public function courses()
-    {
-        return $this->belongsToMany(Course::class, 'course_group');
     }
 }

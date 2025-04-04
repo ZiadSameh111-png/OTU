@@ -73,7 +73,7 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the group that the user belongs to.
+     * العلاقة مع المجموعة التي ينتمي إليها المستخدم
      */
     public function group()
     {
@@ -102,5 +102,13 @@ class User extends Authenticatable
     public function studentCourses()
     {
         return $this->group ? $this->group->courses() : collect();
+    }
+
+    /**
+     * Get the admin requests submitted by this user.
+     */
+    public function adminRequests()
+    {
+        return $this->hasMany(AdminRequest::class, 'user_id');
     }
 }
