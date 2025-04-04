@@ -49,13 +49,13 @@
 
         /* Sidebar Styles */
         .sidebar {
-            width: 280px;
+            width: 260px;
             height: 100vh;
             position: fixed;
             right: 0;
             top: 0;
             background: var(--secondary-bg);
-            padding: 1.8rem 1.5rem;
+            padding: 1.5rem 1.2rem;
             transition: all 0.5s ease;
             box-shadow: -5px 0 15px var(--shadow-color);
             z-index: 1000;
@@ -67,7 +67,7 @@
         @media (max-width: 991.98px) {
             .sidebar {
                 transform: translateX(100%);
-                width: 280px;
+                width: 260px;
             }
             
             .sidebar.show {
@@ -85,15 +85,17 @@
 
         .sidebar .nav-link {
             color: var(--text-secondary);
-            padding: 0.95rem 1.25rem;
-            margin-bottom: 0.85rem;
-            border-radius: 10px;
+            padding: 0.7rem 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 8px;
             transition: all 0.3s;
             position: relative;
             overflow: hidden;
             z-index: 1;
-            font-size: 1.05rem;
+            font-size: 0.9rem;
             letter-spacing: 0.2px;
+            display: flex;
+            align-items: center;
         }
 
         .sidebar .nav-link::before {
@@ -120,16 +122,16 @@
         .sidebar .nav-link.active {
             color: var(--text-primary);
             background: transparent;
-            transform: translateX(-5px);
+            transform: translateX(-3px);
         }
 
         .sidebar .nav-link i {
-            width: 28px;
+            width: 24px;
             text-align: center;
-            margin-left: 16px;
+            margin-left: 12px;
             color: var(--accent-color);
             transition: all 0.3s;
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
 
         .sidebar .nav-link:hover i,
@@ -139,7 +141,7 @@
 
         /* Main Content */
         .main-content {
-            margin-right: 280px;
+            margin-right: 260px;
             padding: 2.5rem;
             transition: all 0.3s ease;
         }
@@ -297,9 +299,9 @@
         /* Brand Styles */
         .navbar-brand {
             color: var(--text-primary) !important;
-            font-size: 1.8rem;
+            font-size: 1.5rem;
             font-weight: 700;
-            margin-bottom: 3rem;
+            margin-bottom: 2rem;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -309,7 +311,7 @@
         .navbar-brand::after {
             content: '';
             position: absolute;
-            bottom: -20px;
+            bottom: -15px;
             left: 0;
             width: 100%;
             height: 1px;
@@ -317,7 +319,7 @@
         }
 
         .navbar-brand i {
-            font-size: 2.5rem;
+            font-size: 2rem;
             color: var(--accent-color);
             filter: drop-shadow(0 0 8px rgba(0, 225, 180, 0.5));
         }
@@ -876,7 +878,7 @@
     <!-- Sidebar -->
     @if(!$isAuthPage)
     <nav class="sidebar">
-        <a class="navbar-brand mb-4" href="{{ url('/') }}">
+        <a class="navbar-brand mb-3" href="{{ url('/') }}">
             <i class="fas fa-graduation-cap"></i>
         </a>
 
@@ -884,7 +886,7 @@
             <li class="nav-item fade-in" style="animation-delay: 0.1s">
                 <a class="nav-link {{ request()->is('dashboard*') ? 'active' : '' }}" href="{{ route('dashboard') }}">
                     <i class="fas fa-home"></i>
-                    لوحة التحكم
+                    الرئيسية
                 </a>
             </li>
             
@@ -907,46 +909,46 @@
             <li class="nav-item fade-in" style="animation-delay: 0.3s">
                 <a class="nav-link {{ request()->routeIs('admin.courses') || request()->is('admin/courses*') ? 'active' : '' }}" href="{{ route('admin.courses') }}">
                     <i class="fas fa-book"></i>
-                    إدارة المقررات
+                    المقررات
                 </a>
             </li>
             
             <li class="nav-item fade-in" style="animation-delay: 0.35s">
                 <a class="nav-link {{ request()->is('admin/schedules*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
                     <i class="fas fa-calendar-alt"></i>
-                    إدارة الجداول الدراسية
+                    الجداول
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.4s">
                 <a class="nav-link {{ request()->is('admin/requests*') ? 'active' : '' }}" href="{{ route('admin.requests') }}">
                     <i class="fas fa-clipboard-list"></i>
-                    الطلبات الإدارية
+                    الطلبات
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.45s">
                 <a class="nav-link {{ request()->is('admin/attendance*') ? 'active' : '' }}" href="{{ route('admin.attendance') }}">
                     <i class="fas fa-user-check"></i>
-                    إدارة الحضور
+                    الحضور
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
                 <a class="nav-link {{ request()->is('admin/messages*') ? 'active' : '' }}" href="{{ route('admin.messages') }}">
                     <i class="fas fa-envelope"></i>
-                    الرسائل الداخلية
+                    الرسائل
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.55s">
                 <a class="nav-link {{ request()->is('admin/fees*') ? 'active' : '' }}" href="{{ route('admin.fees') }}">
                     <i class="fas fa-money-bill-wave"></i>
-                    إدارة الرسوم
+                    الرسوم
                 </a>
-            </li>
-            @endif
-            
+                                </li>
+                            @endif
+
             @if(auth()->check() && auth()->user()->hasRole('Teacher'))
             <!-- Teacher Links -->
             <li class="nav-item fade-in" style="animation-delay: 0.2s">
@@ -969,43 +971,43 @@
                         <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
                     @endif
                 </a>
-            </li>
-            @endif
+                                </li>
+                            @endif
             
             @if(auth()->check() && auth()->user()->hasRole('Student'))
             <!-- Student Links -->
             <li class="nav-item fade-in" style="animation-delay: 0.2s">
                 <a class="nav-link {{ request()->routeIs('courses.student') || request()->is('student/courses*') ? 'active' : '' }}" href="{{ route('courses.student') }}">
                     <i class="fas fa-book-reader"></i>
-                    مقرراتي الدراسية
+                    المقررات
                 </a>
             </li>
             
             <li class="nav-item fade-in" style="animation-delay: 0.25s">
                 <a class="nav-link {{ request()->routeIs('student.schedule') || request()->is('student/schedule*') ? 'active' : '' }}" href="{{ route('student.schedule') }}">
                     <i class="fas fa-calendar-alt"></i>
-                    جدولي الدراسي
+                    الجدول
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.3s">
                 <a class="nav-link {{ request()->is('student/requests*') ? 'active' : '' }}" href="{{ route('student.requests') }}">
                     <i class="fas fa-file-alt"></i>
-                    الطلبات الإدارية
+                    الطلبات
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.35s">
                 <a class="nav-link {{ request()->is('student/messages*') ? 'active' : '' }}" href="{{ route('student.messages') }}">
                     <i class="fas fa-inbox"></i>
-                    صندوق الوارد
+                    الوارد
                 </a>
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.4s">
                 <a class="nav-link {{ request()->is('student/fees*') ? 'active' : '' }}" href="{{ route('student.fees') }}">
                     <i class="fas fa-money-bill-wave"></i>
-                    الرسوم الدراسية
+                    الرسوم
                 </a>
             </li>
 
@@ -1020,22 +1022,16 @@
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
                 <a class="nav-link" href="#">
                     <i class="fas fa-chart-bar"></i>
-                    الإحصائيات
+                    الإحصاءات
                 </a>
             </li>
             
-            <li class="nav-item fade-in" style="animation-delay: 0.6s">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-tasks"></i>
-                    المهام
-                </a>
-            </li>
             <li class="nav-item mt-auto fade-in" style="animation-delay: 0.7s">
                 <form method="POST" action="{{ route('logout') }}">
                                         @csrf
                     <button type="submit" class="nav-link text-danger border-0 bg-transparent w-100 text-end">
                         <i class="fas fa-sign-out-alt"></i>
-                        تسجيل الخروج
+                        خروج
                     </button>
                                     </form>
                             </li>

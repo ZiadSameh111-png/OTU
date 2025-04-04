@@ -54,10 +54,10 @@ class DashboardController extends Controller
         $stats = [
             'studentsCount' => User::whereHas('roles', function($query) {
                 $query->where('name', 'Student');
-            })->count(),
+                    })->count(),
             'teachersCount' => User::whereHas('roles', function($query) {
                 $query->where('name', 'Teacher');
-            })->count(),
+                    })->count(),
             'coursesCount' => Course::count(),
             'groupsCount' => Group::count(),
         ];
@@ -187,7 +187,7 @@ class DashboardController extends Controller
             'coursesCount' => $teacherCourses->count(),
             'groupsCount' => $teacherGroupIds->count(),
             'sessionsCount' => Schedule::whereIn('course_id', $teacherCourses->pluck('id'))
-                ->whereDate('date', $today)
+                ->where('day', $today->format('l'))
                 ->count(),
             'unreadMessages' => \DB::table('messages')
                 ->where('receiver_id', $user->id)
@@ -197,7 +197,7 @@ class DashboardController extends Controller
 
         // Today's schedule for the teacher
         $todaySchedule = Schedule::whereIn('course_id', $teacherCourses->pluck('id'))
-            ->whereDate('date', $today)
+            ->where('day', $today->format('l'))
             ->with(['course', 'group'])
             ->orderBy('start_time')
             ->get();
@@ -310,7 +310,7 @@ class DashboardController extends Controller
                 $query->where('groups.id', $groupId);
             })->count() : 0,
             'sessionsCount' => $groupId ? Schedule::where('group_id', $groupId)
-                ->whereDate('date', $today)
+                ->where('day', $today->format('l'))
                 ->count() : 0,
             'requestsCount' => AdminRequest::where('user_id', $user->id)->count(),
             'unreadMessages' => \DB::table('messages')
@@ -321,7 +321,7 @@ class DashboardController extends Controller
 
         // Today's schedule for the student
         $todaySchedule = $groupId ? Schedule::where('group_id', $groupId)
-            ->whereDate('date', $today)
+            ->where('day', $today->format('l'))
             ->with(['course.teacher'])
             ->orderBy('start_time')
             ->get() : collect();
