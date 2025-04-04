@@ -1008,6 +1008,13 @@
                     الرسوم الدراسية
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.45s">
+                <a class="nav-link {{ request()->routeIs('student.notifications*') ? 'active' : '' }}" href="{{ route('student.notifications') }}">
+                    <i class="fas fa-bell"></i>
+                    الإشعارات
+                </a>
+            </li>
             @endif
             
             <li class="nav-item fade-in" style="animation-delay: 0.5s">

@@ -92,6 +92,12 @@ Route::middleware(['auth'])->group(function () {
         // روابط خاصة للمدفوعات
         Route::get('fees/{fee}/payment', [App\Http\Controllers\FeesController::class, 'createPayment'])->name('fees.payment.create');
         Route::post('fees/{fee}/payment', [App\Http\Controllers\FeesController::class, 'storePayment'])->name('fees.payment.store');
+
+        // Add after admin routes within the Admin middleware group
+        Route::get('/admin/students', [App\Http\Controllers\UserController::class, 'students'])->name('admin.students');
+        Route::get('/admin/teachers', [App\Http\Controllers\UserController::class, 'teachers'])->name('admin.teachers');
+        Route::get('/admin/groups', [App\Http\Controllers\GroupController::class, 'index'])->name('admin.groups');
+        Route::get('/admin/notifications', [App\Http\Controllers\NotificationController::class, 'adminIndex'])->name('admin.notifications');
     });
     
     // Schedule view routes - accessible by students
@@ -123,6 +129,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student/fees/receipt/{paymentId}', [App\Http\Controllers\FeeController::class, 'receipt'])->name('fees.receipt');
         Route::get('/student/fees/statement', [App\Http\Controllers\FeeController::class, 'statement'])->name('fees.statement');
         Route::get('/student/fees/retry/{transactionId}', [App\Http\Controllers\FeeController::class, 'retry'])->name('fees.retry');
+
+        // Add after student schedules routes within the Student middleware group
+        Route::get('/student/notifications', [App\Http\Controllers\NotificationController::class, 'studentIndex'])->name('student.notifications');
+        Route::get('/student/courses/{course}', [App\Http\Controllers\CourseController::class, 'studentShow'])->name('student.courses.show');
+        Route::post('/student/notifications/{id}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('student.notifications.mark-read');
     });
     
     // Course routes - accessible by admin and teachers
@@ -145,6 +156,16 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/teacher/messages/mark-star', [App\Http\Controllers\MessageController::class, 'markAsStar'])->name('teacher.messages.mark-star');
         Route::post('/teacher/messages/batch-delete', [App\Http\Controllers\MessageController::class, 'batchDelete'])->name('teacher.messages.batch-delete');
         Route::delete('/teacher/messages/{message}', [App\Http\Controllers\MessageController::class, 'destroy'])->name('teacher.messages.destroy');
+
+        // Add after teacher courses route within the Teacher middleware group
+        Route::get('/teacher/schedule', [ScheduleController::class, 'teacherSchedule'])->name('teacher.schedule');
+        Route::get('/teacher/schedule/{schedule}', [ScheduleController::class, 'teacherShow'])->name('teacher.schedule.show');
+        Route::get('/teacher/groups', [App\Http\Controllers\GroupController::class, 'teacherGroups'])->name('teacher.groups');
+        Route::get('/teacher/notifications', [App\Http\Controllers\NotificationController::class, 'teacherIndex'])->name('teacher.notifications');
+        Route::get('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'index'])->name('teacher.attendance');
+        Route::get('/teacher/attendance/create', [App\Http\Controllers\StudentAttendanceController::class, 'create'])->name('teacher.attendance.create');
+        Route::post('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'store'])->name('teacher.attendance.store');
+        Route::get('/teacher/attendance/{attendance}', [App\Http\Controllers\StudentAttendanceController::class, 'show'])->name('teacher.attendance.show');
     });
 });
 
