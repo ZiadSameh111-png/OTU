@@ -887,50 +887,72 @@
                     لوحة التحكم
                 </a>
             </li>
+            
             @if(auth()->check() && auth()->user()->hasRole('Admin'))
+            <!-- Admin Links -->
             <li class="nav-item fade-in" style="animation-delay: 0.2s">
                 <a class="nav-link {{ request()->is('users*') ? 'active' : '' }}" href="{{ route('users.index') }}">
                     <i class="fas fa-users"></i>
                     المستخدمين
                 </a>
             </li>
+            
             <li class="nav-item fade-in" style="animation-delay: 0.25s">
                 <a class="nav-link {{ request()->is('groups*') ? 'active' : '' }}" href="{{ route('groups.index') }}">
                     <i class="fas fa-user-friends"></i>
                     المجموعات
                 </a>
             </li>
-            @endif
-            @if(auth()->check() && (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Teacher')))
+            
             <li class="nav-item fade-in" style="animation-delay: 0.3s">
-                <a class="nav-link {{ request()->is('courses*') ? 'active' : '' }}" href="{{ route('courses.index') }}">
+                <a class="nav-link {{ request()->routeIs('admin.courses') || request()->is('admin/courses*') ? 'active' : '' }}" href="{{ route('admin.courses') }}">
                     <i class="fas fa-book"></i>
-                    المقررات
+                    إدارة المقررات
                 </a>
             </li>
-            @endif
-            @if(auth()->check() && auth()->user()->hasRole('Admin'))
-            <li class="nav-item fade-in" style="animation-delay: 0.4s">
+            
+            <li class="nav-item fade-in" style="animation-delay: 0.35s">
                 <a class="nav-link {{ request()->is('admin/schedules*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">
                     <i class="fas fa-calendar-alt"></i>
                     إدارة الجداول الدراسية
                 </a>
             </li>
             @endif
+            
+            @if(auth()->check() && auth()->user()->hasRole('Teacher'))
+            <!-- Teacher Links -->
+            <li class="nav-item fade-in" style="animation-delay: 0.2s">
+                <a class="nav-link {{ request()->routeIs('courses.teacher') || request()->is('teacher/courses*') ? 'active' : '' }}" href="{{ route('courses.teacher') }}">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                    مقرراتي
+                </a>
+            </li>
+            @endif
+            
             @if(auth()->check() && auth()->user()->hasRole('Student'))
-            <li class="nav-item fade-in" style="animation-delay: 0.4s">
+            <!-- Student Links -->
+            <li class="nav-item fade-in" style="animation-delay: 0.2s">
+                <a class="nav-link {{ request()->routeIs('courses.student') || request()->is('student/courses*') ? 'active' : '' }}" href="{{ route('courses.student') }}">
+                    <i class="fas fa-book-reader"></i>
+                    مقرراتي الدراسية
+                </a>
+            </li>
+            
+            <li class="nav-item fade-in" style="animation-delay: 0.25s">
                 <a class="nav-link {{ request()->is('student/schedule*') ? 'active' : '' }}" href="{{ route('student.schedule') }}">
                     <i class="fas fa-calendar"></i>
                     جدولي الدراسي
                 </a>
             </li>
             @endif
+            
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
                 <a class="nav-link" href="#">
                     <i class="fas fa-chart-bar"></i>
                     الإحصائيات
                 </a>
             </li>
+            
             <li class="nav-item fade-in" style="animation-delay: 0.6s">
                 <a class="nav-link" href="#">
                     <i class="fas fa-tasks"></i>

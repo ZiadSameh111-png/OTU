@@ -34,6 +34,15 @@ Route::middleware(['auth'])->group(function () {
         // Group management routes
         Route::resource('groups', App\Http\Controllers\GroupController::class);
         
+        // مسار مباشر لإدارة المقررات للمسؤول
+        Route::get('/admin/courses', [App\Http\Controllers\CourseController::class, 'adminCourses'])->name('admin.courses');
+        Route::get('/admin/courses/create', [App\Http\Controllers\CourseController::class, 'create'])->name('admin.courses.create');
+        Route::post('/admin/courses', [App\Http\Controllers\CourseController::class, 'store'])->name('admin.courses.store');
+        Route::get('/admin/courses/{course}', [App\Http\Controllers\CourseController::class, 'adminShow'])->name('admin.courses.show');
+        Route::get('/admin/courses/{course}/edit', [App\Http\Controllers\CourseController::class, 'edit'])->name('admin.courses.edit');
+        Route::put('/admin/courses/{course}', [App\Http\Controllers\CourseController::class, 'update'])->name('admin.courses.update');
+        Route::delete('/admin/courses/{course}', [App\Http\Controllers\CourseController::class, 'destroy'])->name('admin.courses.destroy');
+        
         // Schedule management routes - only accessible by admin
         Route::get('/admin/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
         Route::get('/admin/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
@@ -46,11 +55,18 @@ Route::middleware(['auth'])->group(function () {
     // Schedule view routes - accessible by students
     Route::middleware(['role:Student'])->group(function () {
         Route::get('/student/schedule', [ScheduleController::class, 'studentSchedule'])->name('student.schedule');
+        // روابط عرض المقررات للطلاب
+        Route::get('/student/courses', [App\Http\Controllers\CourseController::class, 'studentCourses'])->name('courses.student');
     });
     
     // Course routes - accessible by admin and teachers
     Route::middleware(['role:Admin|Teacher'])->group(function () {
         Route::resource('courses', App\Http\Controllers\CourseController::class);
+    });
+    
+    // روابط عرض المقررات للمدرسين - متاحة للمدرسين فقط
+    Route::middleware(['role:Teacher'])->group(function () {
+        Route::get('/teacher/courses', [App\Http\Controllers\CourseController::class, 'teacherCourses'])->name('courses.teacher');
     });
 });
 

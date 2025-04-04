@@ -87,4 +87,20 @@ class User extends Authenticatable
     {
         return $this->group ? $this->group->schedules() : collect();
     }
+
+    /**
+     * Get the courses that the user teaches (for teachers only).
+     */
+    public function teacherCourses()
+    {
+        return $this->hasMany(Course::class, 'teacher_id');
+    }
+
+    /**
+     * Get the courses for the student based on their group.
+     */
+    public function studentCourses()
+    {
+        return $this->group ? $this->group->courses() : collect();
+    }
 }

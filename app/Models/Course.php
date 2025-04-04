@@ -12,7 +12,8 @@ class Course extends Model
     protected $fillable = [
         'name',
         'code',
-        'description'
+        'description',
+        'teacher_id'
     ];
 
     /**
@@ -21,5 +22,21 @@ class Course extends Model
     public function schedules()
     {
         return $this->hasMany(Schedule::class);
+    }
+
+    /**
+     * Get the teacher that owns the course.
+     */
+    public function teacher()
+    {
+        return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    /**
+     * The groups that belong to the course.
+     */
+    public function groups()
+    {
+        return $this->belongsToMany(Group::class, 'course_group');
     }
 }
