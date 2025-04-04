@@ -13,10 +13,12 @@ class AdminRequest extends Model
         'user_id',
         'type',
         'details',
+        'priority',
         'request_date',
         'status',
         'admin_comment',
         'admin_id',
+        'attachment',
     ];
 
     protected $casts = [
@@ -69,5 +71,20 @@ class AdminRequest extends Model
         ];
 
         return $statuses[$this->status] ?? $this->status;
+    }
+
+    /**
+     * الحصول على اسم أولوية الطلب بشكل مناسب للعرض
+     */
+    public function getPriorityNameAttribute()
+    {
+        $priorities = [
+            'low' => 'منخفضة',
+            'normal' => 'عادية',
+            'high' => 'عالية',
+            'urgent' => 'عاجلة',
+        ];
+
+        return $priorities[$this->priority] ?? $this->priority;
     }
 }
