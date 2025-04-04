@@ -4,6 +4,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\AdminRequestController;
+use App\Http\Controllers\AdminController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\TeacherAttendanceController;
+use App\Http\Controllers\GradeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -98,6 +102,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/teachers', [App\Http\Controllers\UserController::class, 'teachers'])->name('admin.teachers');
         Route::get('/admin/groups', [App\Http\Controllers\GroupController::class, 'index'])->name('admin.groups');
         Route::get('/admin/notifications', [App\Http\Controllers\NotificationController::class, 'adminIndex'])->name('admin.notifications');
+        
+        // Grades Reports Routes
+        Route::get('/admin/grades/reports', [App\Http\Controllers\GradeController::class, 'adminReports'])->name('admin.grades.reports');
+        Route::get('/admin/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'courseReport'])->name('admin.grades.course.report');
+        Route::get('/admin/grades/group/{group}', [App\Http\Controllers\GradeController::class, 'groupReport'])->name('admin.grades.group.report');
+        Route::get('/admin/grades/export/course/{course}/{format?}', [App\Http\Controllers\GradeController::class, 'exportCourseGrades'])->name('admin.grades.export.course');
     });
     
     // Schedule view routes - accessible by students
@@ -134,6 +144,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student/notifications', [App\Http\Controllers\NotificationController::class, 'studentIndex'])->name('student.notifications');
         Route::get('/student/courses/{course}', [App\Http\Controllers\CourseController::class, 'studentShow'])->name('student.courses.show');
         Route::post('/student/notifications/{id}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('student.notifications.mark-read');
+        
+        // Grades Routes
+        Route::get('/student/grades', [App\Http\Controllers\GradeController::class, 'studentGrades'])->name('student.grades');
+        Route::get('/student/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'studentGradeDetails'])->name('student.grades.details');
     });
     
     // Course routes - accessible by admin and teachers
@@ -166,6 +180,31 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/teacher/attendance/create', [App\Http\Controllers\StudentAttendanceController::class, 'create'])->name('teacher.attendance.create');
         Route::post('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'store'])->name('teacher.attendance.store');
         Route::get('/teacher/attendance/{attendance}', [App\Http\Controllers\StudentAttendanceController::class, 'show'])->name('teacher.attendance.show');
+        
+        // Grades Management Routes
+        Route::get('/teacher/grades', [App\Http\Controllers\GradeController::class, 'index'])->name('teacher.grades.index');
+        Route::get('/teacher/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'manageCourse'])->name('teacher.grades.manage');
+        Route::post('/teacher/grades/course/{course}/update', [App\Http\Controllers\GradeController::class, 'updateBatch'])->name('teacher.grades.update.batch');
+        Route::post('/teacher/grades/course/{course}/submit', [App\Http\Controllers\GradeController::class, 'submitFinal'])->name('teacher.grades.submit.final');
+    });
+
+    // Grade Management Routes
+    Route::middleware(['role:Teacher'])->group(function () {
+        Route::get('/teacher/grades', [GradeController::class, 'teacherIndex'])->name('teacher.grades.index');
+        Route::get('/teacher/grades/course/{course}', [GradeController::class, 'manageCourse'])->name('teacher.grades.manage');
+        Route::post('/teacher/grades/store', [GradeController::class, 'store'])->name('teacher.grades.store');
+        Route::post('/teacher/grades/submit', [GradeController::class, 'submit'])->name('teacher.grades.submit');
+    });
+
+    // Student Grade Routes
+    Route::middleware(['role:Student'])->group(function () {
+        Route::get('/student/grades', [GradeController::class, 'studentIndex'])->name('student.grades.index');
+    });
+
+    // Admin Grade Routes
+    Route::middleware(['role:Admin'])->group(function () {
+        Route::get('/admin/grades', [GradeController::class, 'adminIndex'])->name('admin.grades.index');
+        Route::get('/admin/grades/course/{course}', [GradeController::class, 'adminViewCourse'])->name('admin.grades.view');
     });
 });
 

@@ -37,6 +37,14 @@ class Course extends Model
      */
     public function groups()
     {
-        return $this->belongsToMany(Group::class, 'course_group');
+        return $this->belongsToMany(Group::class);
+    }
+
+    /**
+     * Get the grades for this course.
+     */
+    public function grades()
+    {
+        return $this->hasMany(Grade::class);
     }
 }

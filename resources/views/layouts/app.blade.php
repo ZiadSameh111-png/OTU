@@ -946,8 +946,15 @@
                     <i class="fas fa-money-bill-wave"></i>
                     الرسوم
                 </a>
-                                </li>
-                            @endif
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.6s">
+                <a class="nav-link {{ request()->is('admin/grades*') ? 'active' : '' }}" href="{{ route('admin.grades.reports') }}">
+                    <i class="fas fa-chart-bar"></i>
+                    تقارير الدرجات
+                </a>
+            </li>
+            @endif
 
             @if(auth()->check() && auth()->user()->hasRole('Teacher'))
             <!-- Teacher Links -->
@@ -971,8 +978,15 @@
                         <span class="badge bg-danger ms-auto">{{ $unreadCount }}</span>
                     @endif
                 </a>
-                                </li>
-                            @endif
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.3s">
+                <a class="nav-link {{ request()->is('teacher/grades*') ? 'active' : '' }}" href="{{ route('teacher.grades.index') }}">
+                    <i class="fas fa-clipboard-check"></i>
+                    إدارة الدرجات
+                </a>
+            </li>
+            @endif
             
             @if(auth()->check() && auth()->user()->hasRole('Student'))
             <!-- Student Links -->
@@ -1017,6 +1031,13 @@
                     الإشعارات
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.5s">
+                <a class="nav-link {{ request()->is('student/grades*') ? 'active' : '' }}" href="{{ route('student.grades') }}">
+                    <i class="fas fa-graduation-cap"></i>
+                    درجاتي
+                </a>
+            </li>
             @endif
             
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
@@ -1028,15 +1049,15 @@
             
             <li class="nav-item mt-auto fade-in" style="animation-delay: 0.7s">
                 <form method="POST" action="{{ route('logout') }}">
-                                        @csrf
+                    @csrf
                     <button type="submit" class="nav-link text-danger border-0 bg-transparent w-100 text-end">
                         <i class="fas fa-sign-out-alt"></i>
                         خروج
                     </button>
-                                    </form>
-                            </li>
-                    </ul>
-        </nav>
+                </form>
+            </li>
+        </ul>
+    </nav>
     @endif
 
     <!-- Main Content -->
@@ -1048,8 +1069,8 @@
             <p>نظام إدارة الجامعة</p>
         </div>
         @endif
-            @yield('content')
-        </main>
+        @yield('content')
+    </main>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
