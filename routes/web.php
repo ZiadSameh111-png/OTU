@@ -31,6 +31,9 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:Admin'])->group(function () {
         Route::resource('users', App\Http\Controllers\UserController::class);
         
+        // Group management routes
+        Route::resource('groups', App\Http\Controllers\GroupController::class);
+        
         // Schedule management routes - only accessible by admin
         Route::get('/admin/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
         Route::get('/admin/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
@@ -49,4 +52,53 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:Admin|Teacher'])->group(function () {
         Route::resource('courses', App\Http\Controllers\CourseController::class);
     });
+});
+
+// Route for testing purposes - temporary
+Route::get('/generate-test-data', function () {
+    // Create test groups if they don't exist
+    if (\App\Models\Group::count() == 0) {
+        $groups = [
+            ['name' => 'مجموعة هندسة البرمجيات', 'description' => 'مجموعة متخصصة في هندسة البرمجيات والتطوير', 'active' => true],
+            ['name' => 'مجموعة تطوير الويب', 'description' => 'مجموعة متخصصة في تطوير تطبيقات الويب', 'active' => true],
+            ['name' => 'مجموعة الذكاء الاصطناعي', 'description' => 'مجموعة متخصصة في الذكاء الاصطناعي وتعلم الآلة', 'active' => true],
+            ['name' => 'مجموعة تحليل البيانات', 'description' => 'مجموعة متخصصة في علم البيانات وتحليلها', 'active' => false]
+        ];
+
+        foreach ($groups as $groupData) {
+            \App\Models\Group::create($groupData);
+        }
+    }
+
+    return redirect()->route('groups.index')->with('success', 'تم إنشاء بيانات اختبارية للمجموعات');
+});
+
+// Route for testing purposes - temporary
+Route::get('/generate-admin-user', function () {
+    // Check if admin user already exists
+    $adminEmail = 'admin@otu.edu';
+    $existingAdmin = \App\Models\User::where('email', $adminEmail)->first();
+    
+    if (!$existingAdmin) {
+        // Get admin role
+        $adminRole = \App\Models\Role::where('name', 'Admin')->first();
+        
+        if (!$adminRole) {
+            return redirect()->route('dashboard')->with('error', 'دور المدير غير موجود في النظام');
+        }
+        
+        // Create admin user
+        $admin = \App\Models\User::create([
+            'name' => 'مدير النظام',
+            'email' => $adminEmail,
+            'password' => \Illuminate\Support\Facades\Hash::make('password123'),
+        ]);
+        
+        // Assign admin role
+        $admin->roles()->attach($adminRole);
+        
+        return redirect()->route('login')->with('success', 'تم إنشاء حساب المدير بنجاح. البريد الإلكتروني: ' . $adminEmail . ' وكلمة المرور: password123');
+    }
+    
+    return redirect()->route('login')->with('info', 'حساب المدير موجود بالفعل. البريد الإلكتروني: ' . $adminEmail);
 });

@@ -894,6 +894,12 @@
                     المستخدمين
                 </a>
             </li>
+            <li class="nav-item fade-in" style="animation-delay: 0.25s">
+                <a class="nav-link {{ request()->is('groups*') ? 'active' : '' }}" href="{{ route('groups.index') }}">
+                    <i class="fas fa-user-friends"></i>
+                    المجموعات
+                </a>
+            </li>
             @endif
             @if(auth()->check() && (auth()->user()->hasRole('Admin') || auth()->user()->hasRole('Teacher')))
             <li class="nav-item fade-in" style="animation-delay: 0.3s">

@@ -9,42 +9,28 @@ use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
 
-// Set admin credentials
-$name = 'Admin User';
-$email = 'admin@otu.edu';
-$password = 'Admin@123';
-
-// Create user if doesn't exist
-$user = User::where('email', $email)->first();
-if (!$user) {
-    $user = User::create([
-        'name' => $name,
-        'email' => $email,
-        'password' => Hash::make($password)
-    ]);
-    echo "Admin user created successfully!\n";
-} else {
-    // Update password if user exists
-    $user->password = Hash::make($password);
-    $user->save();
-    echo "Admin user already exists, password updated!\n";
+// حذف المستخدم إذا كان موجودًا
+$existingAdmin = User::where('email', 'admin@otu.edu')->first();
+if ($existingAdmin) {
+    $existingAdmin->roles()->detach();
+    $existingAdmin->delete();
+    echo "تم حذف المستخدم المدير القديم\n";
 }
 
-// Ensure admin role exists
+// إنشاء مستخدم جديد
+$admin = User::create([
+    'name' => 'مدير النظام',
+    'email' => 'admin@otu.edu',
+    'password' => Hash::make('password123'),
+]);
+
+// تعيين دور المدير
 $adminRole = Role::where('name', 'Admin')->first();
-if (!$adminRole) {
-    $adminRole = Role::create(['name' => 'Admin']);
-    echo "Admin role created!\n";
-}
-
-// Assign admin role to user
-if (!$user->hasRole('Admin')) {
-    $user->assignRole('Admin');
-    echo "Admin role assigned to user!\n";
+if ($adminRole) {
+    $admin->roles()->attach($adminRole);
+    echo "تم إنشاء حساب المدير بنجاح!\n";
+    echo "البريد الإلكتروني: admin@otu.edu\n";
+    echo "كلمة المرور: password123\n";
 } else {
-    echo "User already has Admin role!\n";
-}
-
-echo "\nAdmin Account Details:\n";
-echo "Email: " . $email . "\n";
-echo "Password: " . $password . "\n"; 
+    echo "خطأ: دور المدير (Admin) غير موجود في قاعدة البيانات!\n";
+} 

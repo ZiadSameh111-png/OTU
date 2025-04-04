@@ -27,16 +27,16 @@
                 <div class="row">
                     <div class="col-md-6 mb-4">
                         <div class="form-group">
-                            <label for="student_id" class="form-label fw-bold">الطالب</label>
-                            <select id="student_id" name="student_id" class="form-select @error('student_id') is-invalid @enderror" required>
-                                <option value="">اختر الطالب...</option>
-                                @foreach($students as $student)
-                                    <option value="{{ $student->id }}" {{ $schedule->student_id == $student->id ? 'selected' : '' }}>
-                                        {{ $student->name }} ({{ $student->email }})
+                            <label for="group_id" class="form-label fw-bold">المجموعة</label>
+                            <select id="group_id" name="group_id" class="form-select @error('group_id') is-invalid @enderror" required>
+                                <option value="">اختر المجموعة...</option>
+                                @foreach($groups as $group)
+                                    <option value="{{ $group->id }}" {{ $schedule->group_id == $group->id ? 'selected' : '' }}>
+                                        {{ $group->name }}
                                     </option>
                                 @endforeach
                             </select>
-                            @error('student_id')
+                            @error('group_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>

@@ -27,7 +27,7 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th>الطالب</th>
+                                <th>المجموعة</th>
                                 <th>المقرر</th>
                                 <th>اليوم</th>
                                 <th>الوقت</th>
@@ -39,8 +39,8 @@
                             @foreach($schedules as $schedule)
                                 <tr>
                                     <td>
-                                        <strong>{{ $schedule->student->name }}</strong><br>
-                                        <small class="text-muted">{{ $schedule->student->email }}</small>
+                                        <strong>{{ $schedule->group->name }}</strong><br>
+                                        <small class="text-muted">{{ $schedule->group->description }}</small>
                                     </td>
                                     <td>
                                         <strong>{{ $schedule->course->name }}</strong><br>

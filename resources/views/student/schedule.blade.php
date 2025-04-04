@@ -5,7 +5,7 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">My Academic Schedule</h2>
+                <h2 class="mb-0">جدولي الدراسي - {{ $groupName }}</h2>
             </div>
         </div>
     </div>
@@ -31,11 +31,11 @@
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Course Name</th>
-                                    <th>Day</th>
-                                    <th>Start Time</th>
-                                    <th>End Time</th>
-                                    <th>Room</th>
+                                    <th>المقرر</th>
+                                    <th>اليوم</th>
+                                    <th>وقت البداية</th>
+                                    <th>وقت النهاية</th>
+                                    <th>القاعة</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -48,7 +48,7 @@
                                     <td>{{ $schedule->day }}</td>
                                     <td>{{ date('h:i A', strtotime($schedule->start_time)) }}</td>
                                     <td>{{ date('h:i A', strtotime($schedule->end_time)) }}</td>
-                                    <td>{{ $schedule->room ?? 'N/A' }}</td>
+                                    <td>{{ $schedule->room ?? 'غير محدد' }}</td>
                                 </tr>
                                 @endforeach
                             </tbody>
@@ -57,8 +57,8 @@
                     @else
                     <div class="text-center py-5">
                         <img src="{{ asset('images/empty-schedule.svg') }}" alt="No Schedules" class="img-fluid mb-3" style="max-height: 150px;">
-                        <h3>No Schedules Available</h3>
-                        <p class="text-muted">You don't have any scheduled classes yet.</p>
+                        <h3>لا توجد جداول دراسية</h3>
+                        <p class="text-muted">لا توجد محاضرات مجدولة لمجموعتك بعد.</p>
                     </div>
                     @endif
                 </div>

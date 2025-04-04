@@ -43,6 +43,8 @@ class DashboardController extends Controller
                     'totalTeachers' => \App\Models\User::whereHas('roles', function($q) {
                         $q->where('name', 'Teacher');
                     })->count(),
+                    'totalGroups' => \App\Models\Group::count(),
+                    'activeGroups' => \App\Models\Group::where('active', true)->count()
                 ]);
 
             case 'Teacher':

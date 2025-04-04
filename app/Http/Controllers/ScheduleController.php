@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Schedule;
 use App\Models\Course;
 use App\Models\User;
+use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -30,12 +31,11 @@ class ScheduleController extends Controller
         // Check user role
         if (Auth::user()->hasRole('Admin')) {
             // Get all schedules for admin view
-            $schedules = Schedule::with(['course', 'student'])->get();
+            $schedules = Schedule::with(['course', 'group'])->get();
             return view('admin.schedules.index', compact('schedules'));
         } else if (Auth::user()->hasRole('Student')) {
-            // Get the logged-in student's schedules
-            $schedules = Auth::user()->schedules()->with('course')->get();
-            return view('schedules.index', compact('schedules'));
+            // Redirect student to studentSchedule method
+            return redirect()->route('student.schedule');
         } else {
             // Redirect other roles
             return redirect()->route('dashboard')->with('error', 'You do not have permission to view schedules.');
@@ -54,15 +54,13 @@ class ScheduleController extends Controller
             return redirect()->route('dashboard')->with('error', 'You do not have permission to create schedules.');
         }
 
-        // Get all courses and students for the dropdown
+        // Get all courses and groups for the dropdown
         $courses = Course::all();
-        $students = User::whereHas('roles', function($query) {
-            $query->where('name', 'Student');
-        })->get();
+        $groups = Group::where('active', true)->get();
         
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         
-        return view('schedules.create', compact('courses', 'students', 'days'));
+        return view('admin.schedules.create', compact('courses', 'groups', 'days'));
     }
 
     /**
@@ -81,7 +79,7 @@ class ScheduleController extends Controller
         // Validate the request data
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'student_id' => 'required|exists:users,id',
+            'group_id' => 'required|exists:groups,id',
             'day' => 'required|string',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
@@ -91,7 +89,7 @@ class ScheduleController extends Controller
         // Create the schedule
         $schedule = Schedule::create([
             'course_id' => $request->course_id,
-            'student_id' => $request->student_id,
+            'group_id' => $request->group_id,
             'day' => $request->day,
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
@@ -126,15 +124,13 @@ class ScheduleController extends Controller
             return redirect()->route('dashboard')->with('error', 'You do not have permission to edit schedules.');
         }
 
-        // Get all courses and students for the dropdown
+        // Get all courses and groups for the dropdown
         $courses = Course::all();
-        $students = User::whereHas('roles', function($query) {
-            $query->where('name', 'Student');
-        })->get();
+        $groups = Group::where('active', true)->get();
         
         $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         
-        return view('admin.schedules.edit', compact('schedule', 'courses', 'students', 'days'));
+        return view('admin.schedules.edit', compact('schedule', 'courses', 'groups', 'days'));
     }
 
     /**
@@ -154,7 +150,7 @@ class ScheduleController extends Controller
         // Validate the request data
         $request->validate([
             'course_id' => 'required|exists:courses,id',
-            'student_id' => 'required|exists:users,id',
+            'group_id' => 'required|exists:groups,id',
             'day' => 'required|string',
             'start_time' => 'required',
             'end_time' => 'required|after:start_time',
@@ -164,7 +160,7 @@ class ScheduleController extends Controller
         // Update the schedule
         $schedule->update([
             'course_id' => $request->course_id,
-            'student_id' => $request->student_id,
+            'group_id' => $request->group_id,
             'day' => $request->day,
             'start_time' => $request->start_time,
             'end_time' => $request->end_time,
@@ -196,7 +192,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Display the schedules for the logged-in student.
+     * Display the schedules for the logged-in student based on their group.
      *
      * @return \Illuminate\Http\Response
      */
@@ -207,9 +203,19 @@ class ScheduleController extends Controller
             return redirect()->route('dashboard')->with('error', 'You do not have permission to view this page.');
         }
 
-        // Get the logged-in student's schedules
-        $schedules = Auth::user()->schedules()->with('course')->get();
+        // Get the student's group
+        $group = Auth::user()->group;
         
-        return view('student.schedule', compact('schedules'));
+        if (!$group) {
+            return view('student.schedule', ['schedules' => collect(), 'groupName' => 'لا توجد مجموعة']);
+        }
+
+        // Get the group's schedules
+        $schedules = $group->schedules()->with('course')->get();
+        
+        return view('student.schedule', [
+            'schedules' => $schedules,
+            'groupName' => $group->name
+        ]);
     }
 }

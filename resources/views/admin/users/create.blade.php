@@ -90,6 +90,19 @@
                             </select>
                         </div>
 
+                        <div class="mb-4" id="group-container" style="{{ old('role_id') && $roles->find(old('role_id'))->name == 'Student' ? '' : 'display: none;' }}">
+                            <label for="group_id" class="form-label">
+                                <i class="fas fa-users me-2"></i>المجموعة
+                            </label>
+                            <select id="group_id" name="group_id" class="form-select @error('group_id') is-invalid @enderror">
+                                <option value="">اختر المجموعة</option>
+                                @foreach(\App\Models\Group::where('active', true)->get() as $group)
+                                <option value="{{ $group->id }}" {{ old('group_id') == $group->id ? 'selected' : '' }}>{{ $group->name }}</option>
+                                @endforeach
+                            </select>
+                            <small class="text-muted">يتم تحديد المجموعة للطلاب فقط</small>
+                        </div>
+
                         <div class="d-flex justify-content-between align-items-center">
                             <a href="{{ route('users.index') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-right me-2"></i>رجوع
@@ -108,6 +121,16 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Show/hide group selection based on role
+        const roleSelect = document.getElementById('role_id');
+        const groupContainer = document.getElementById('group-container');
+        
+        roleSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const isStudent = selectedOption.text === 'Student';
+            groupContainer.style.display = isStudent ? 'block' : 'none';
+        });
+
         // Toggle Password Visibility
         const togglePassword = document.getElementById('togglePassword');
         const password = document.getElementById('password');

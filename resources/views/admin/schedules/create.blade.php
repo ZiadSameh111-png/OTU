@@ -5,9 +5,9 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                <h2 class="mb-0">Add New Academic Schedule</h2>
+                <h2 class="mb-0">إضافة جدول دراسي جديد</h2>
                 <a href="{{ route('schedules.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left mr-1"></i> Back to Schedules
+                    <i class="fas fa-arrow-right me-1"></i> العودة إلى الجداول
                 </a>
             </div>
         </div>
@@ -29,9 +29,9 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="course_id">Course</label>
+                                    <label for="course_id">المقرر الدراسي</label>
                                     <select name="course_id" id="course_id" class="form-control @error('course_id') is-invalid @enderror" required>
-                                        <option value="">Select Course</option>
+                                        <option value="">اختر المقرر...</option>
                                         @foreach($courses as $course)
                                             <option value="{{ $course->id }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>
                                                 {{ $course->name }} ({{ $course->code }})
@@ -48,16 +48,16 @@
 
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label for="student_id">Student</label>
-                                    <select name="student_id" id="student_id" class="form-control @error('student_id') is-invalid @enderror" required>
-                                        <option value="">Select Student</option>
-                                        @foreach($students as $student)
-                                            <option value="{{ $student->id }}" {{ old('student_id') == $student->id ? 'selected' : '' }}>
-                                                {{ $student->name }} ({{ $student->email }})
+                                    <label for="group_id">المجموعة</label>
+                                    <select name="group_id" id="group_id" class="form-control @error('group_id') is-invalid @enderror" required>
+                                        <option value="">اختر المجموعة...</option>
+                                        @foreach($groups as $group)
+                                            <option value="{{ $group->id }}" {{ old('group_id') == $group->id ? 'selected' : '' }}>
+                                                {{ $group->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    @error('student_id')
+                                    @error('group_id')
                                         <span class="invalid-feedback" role="alert">
                                             <strong>{{ $message }}</strong>
                                         </span>
@@ -69,10 +69,10 @@
                         <div class="row mb-3">
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="day">Day</label>
+                                    <label for="day">اليوم</label>
                                     <select name="day" id="day" class="form-control @error('day') is-invalid @enderror" required>
-                                        <option value="">Select Day</option>
-                                        @foreach(['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as $day)
+                                        <option value="">اختر اليوم...</option>
+                                        @foreach($days as $day)
                                             <option value="{{ $day }}" {{ old('day') == $day ? 'selected' : '' }}>
                                                 {{ $day }}
                                             </option>
@@ -88,7 +88,7 @@
 
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="start_time">Start Time</label>
+                                    <label for="start_time">وقت البداية</label>
                                     <input type="time" name="start_time" id="start_time" value="{{ old('start_time') }}" class="form-control @error('start_time') is-invalid @enderror" required>
                                     @error('start_time')
                                         <span class="invalid-feedback" role="alert">
@@ -100,7 +100,7 @@
 
                             <div class="col-md-4">
                                 <div class="form-group">
-                                    <label for="end_time">End Time</label>
+                                    <label for="end_time">وقت النهاية</label>
                                     <input type="time" name="end_time" id="end_time" value="{{ old('end_time') }}" class="form-control @error('end_time') is-invalid @enderror" required>
                                     @error('end_time')
                                         <span class="invalid-feedback" role="alert">
@@ -114,8 +114,8 @@
                         <div class="row mb-4">
                             <div class="col-md-12">
                                 <div class="form-group">
-                                    <label for="room">Room (Optional)</label>
-                                    <input type="text" name="room" id="room" value="{{ old('room') }}" class="form-control @error('room') is-invalid @enderror" placeholder="Enter room name or number">
+                                    <label for="room">القاعة (اختياري)</label>
+                                    <input type="text" name="room" id="room" value="{{ old('room') }}" class="form-control @error('room') is-invalid @enderror" placeholder="أدخل اسم أو رقم القاعة">
                                     @error('room')
                                         <span class="invalid-feedback" role="alert">
                                             <strong>{{ $message }}</strong>
@@ -128,10 +128,10 @@
                         <div class="row">
                             <div class="col-12">
                                 <button type="submit" class="btn btn-primary">
-                                    <i class="fas fa-save mr-1"></i> Create Schedule
+                                    <i class="fas fa-save me-1"></i> إنشاء الجدول
                                 </button>
                                 <a href="{{ route('schedules.index') }}" class="btn btn-secondary">
-                                    Cancel
+                                    إلغاء
                                 </a>
                             </div>
                         </div>

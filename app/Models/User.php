@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'group_id',
     ];
 
     /**
@@ -72,10 +73,18 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the schedules for the student.
+     * Get the group that the user belongs to.
+     */
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    /**
+     * Get the schedules for the student based on their group.
      */
     public function schedules()
     {
-        return $this->hasMany(Schedule::class, 'student_id');
+        return $this->group ? $this->group->schedules() : collect();
     }
 }

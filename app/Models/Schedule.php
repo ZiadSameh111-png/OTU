@@ -11,7 +11,7 @@ class Schedule extends Model
 
     protected $fillable = [
         'course_id',
-        'student_id',
+        'group_id',
         'day',
         'start_time',
         'end_time',
@@ -27,10 +27,10 @@ class Schedule extends Model
     }
 
     /**
-     * Get the student that the schedule belongs to.
+     * Get the group that the schedule belongs to.
      */
-    public function student()
+    public function group()
     {
-        return $this->belongsTo(User::class, 'student_id');
+        return $this->belongsTo(Group::class);
     }
 }

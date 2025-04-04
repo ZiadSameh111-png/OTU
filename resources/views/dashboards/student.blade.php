@@ -17,6 +17,17 @@
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
                                 مرحباً {{ $user->name }}! مرحباً بك في نظام الجامعة الذكي.
+                                @if($user->group)
+                                    <span class="d-block mt-2">
+                                        <i class="fas fa-users me-2"></i>
+                                        المجموعة: <strong>{{ $user->group->name }}</strong>
+                                    </span>
+                                @else
+                                    <span class="d-block mt-2 text-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        لم يتم تعيينك إلى مجموعة بعد.
+                                    </span>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -44,6 +55,9 @@
                                         <div class="feature-content">
                                             <h3>الجدول الدراسي</h3>
                                             <p>عرض جدول المحاضرات</p>
+                                            <a href="{{ route('student.schedule') }}" class="btn btn-sm btn-primary mt-2">
+                                                <i class="fas fa-external-link-alt me-1"></i> عرض الجدول
+                                            </a>
                                         </div>
                                     </div>
                                 </div>

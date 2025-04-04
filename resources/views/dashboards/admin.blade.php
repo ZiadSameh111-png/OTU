@@ -57,6 +57,19 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-md-4 col-6 mb-3">
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-sm bg-primary-soft rounded-circle me-3">
+                                        <span class="avatar-title text-primary">
+                                            <i class="fas fa-user-friends"></i>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h5 class="fw-bold mb-0">{{ $totalGroups }}</h5>
+                                        <span class="text-muted fs-sm">المجموعات</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="mt-4">
@@ -276,6 +289,68 @@
                             <span class="text-primary small">منذ يومين</span>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Groups and Schedules Navigation -->
+    <div class="row mb-4">
+        <div class="col-12 mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-user-friends me-2 text-primary"></i> إدارة النظام
+            </h5>
+        </div>
+        <div class="col-lg-6 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body p-3 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="mb-1">إدارة المجموعات</h5>
+                            <span class="d-block text-muted small">
+                                <i class="fas fa-info-circle me-1"></i> عرض وإدارة كل مجموعات النظام
+                            </span>
+                        </div>
+                        <div class="bg-primary-soft p-3 rounded">
+                            <i class="fas fa-user-friends text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="row text-center mb-3">
+                        <div class="col-6 border-end">
+                            <h6 class="mb-0">{{ $totalGroups }}</h6>
+                            <small class="text-muted d-block">إجمالي المجموعات</small>
+                        </div>
+                        <div class="col-6">
+                            <h6 class="mb-0">{{ $activeGroups }}</h6>
+                            <small class="text-muted d-block">مجموعات نشطة</small>
+                        </div>
+                    </div>
+                    <a href="{{ route('groups.index') }}" class="btn btn-primary w-100">
+                        <i class="fas fa-cog me-1"></i> إدارة المجموعات
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-6 mb-4">
+            <div class="card h-100">
+                <div class="card-body p-3 position-relative">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="mb-1">إدارة الجداول الدراسية</h5>
+                            <span class="d-block text-muted small">
+                                <i class="fas fa-info-circle me-1"></i> عرض وتنظيم جداول المجموعات المختلفة
+                            </span>
+                        </div>
+                        <div class="bg-primary-soft p-3 rounded">
+                            <i class="fas fa-calendar-alt text-primary fa-2x"></i>
+                        </div>
+                    </div>
+                    <div class="mt-2 mb-4">
+                        <p class="text-muted mb-0">يمكنك إدارة الجداول الدراسية وتحديد المقررات والأوقات للمجموعات المختلفة</p>
+                    </div>
+                    <a href="{{ route('schedules.index') }}" class="btn btn-primary w-100">
+                        <i class="fas fa-cog me-1"></i> إدارة الجداول الدراسية
+                    </a>
                 </div>
             </div>
         </div>

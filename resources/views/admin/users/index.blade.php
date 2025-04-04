@@ -28,6 +28,7 @@
                                     <th><i class="fas fa-user me-2"></i>Name</th>
                                     <th><i class="fas fa-envelope me-2"></i>Email</th>
                                     <th><i class="fas fa-tag me-2"></i>Role</th>
+                                    <th><i class="fas fa-users me-2"></i>Group</th>
                                     <th><i class="fas fa-cogs me-2"></i>Actions</th>
                                 </tr>
                             </thead>
@@ -42,6 +43,15 @@
                                                     <i class="fas fa-shield-alt me-1"></i>{{ $role->name }}
                                                 </span>
                                             @endforeach
+                                        </td>
+                                        <td>
+                                            @if($user->hasRole('Student') && $user->group)
+                                                <span class="badge bg-info animate__animated animate__fadeIn">
+                                                    <i class="fas fa-users me-1"></i>{{ $user->group->name }}
+                                                </span>
+                                            @else
+                                                <span class="text-muted">-</span>
+                                            @endif
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">

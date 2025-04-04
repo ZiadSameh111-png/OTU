@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Role;
+use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -29,7 +30,8 @@ class UserController extends Controller
     public function create()
     {
         $roles = Role::all();
-        return view('admin.users.create', compact('roles'));
+        $groups = Group::where('active', true)->get();
+        return view('admin.users.create', compact('roles', 'groups'));
     }
 
     /**
@@ -44,13 +46,15 @@ class UserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'role_id' => ['required', 'exists:roles,id']
+            'role_id' => ['required', 'exists:roles,id'],
+            'group_id' => ['nullable', 'exists:groups,id']
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'group_id' => $request->group_id,
         ]);
 
         // Assign the selected role to the user
@@ -58,7 +62,7 @@ class UserController extends Controller
         $user->roles()->attach($role);
 
         return redirect()->route('users.index')
-            ->with('success', 'User created successfully.');
+            ->with('success', 'تم إنشاء المستخدم بنجاح.');
     }
 
     /**
@@ -81,7 +85,8 @@ class UserController extends Controller
     public function edit(User $user)
     {
         $roles = Role::all();
-        return view('admin.users.edit', compact('user', 'roles'));
+        $groups = Group::where('active', true)->get();
+        return view('admin.users.edit', compact('user', 'roles', 'groups'));
     }
 
     /**
@@ -96,7 +101,8 @@ class UserController extends Controller
         $validationRules = [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,' . $user->id],
-            'role_id' => ['required', 'exists:roles,id']
+            'role_id' => ['required', 'exists:roles,id'],
+            'group_id' => ['nullable', 'exists:groups,id']
         ];
 
         // إضافة قواعد التحقق من كلمة المرور فقط إذا تم تقديمها
@@ -110,6 +116,7 @@ class UserController extends Controller
         $userData = [
             'name' => $request->name,
             'email' => $request->email,
+            'group_id' => $request->group_id,
         ];
 
         // تحديث كلمة المرور فقط إذا تم تقديمها
