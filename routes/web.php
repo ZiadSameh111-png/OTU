@@ -271,3 +271,29 @@ Route::get('/generate-admin-user', function () {
     
     return redirect()->route('login')->with('info', 'حساب المدير موجود بالفعل. البريد الإلكتروني: ' . $adminEmail);
 });
+
+// Admin Routes
+Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
+    // ... existing code ...
+
+    // Grades
+    Route::get('/grades/reports', [GradeController::class, 'adminReports'])->name('grades.reports');
+    Route::get('/grades/export/{format?}', [GradeController::class, 'export'])->name('grades.export');
+    Route::get('/grades/{id}/edit', [GradeController::class, 'edit'])->name('grades.edit');
+    Route::put('/grades/{id}', [GradeController::class, 'update'])->name('grades.update');
+    Route::get('/courses/{courseId}/report', [GradeController::class, 'courseReport'])->name('courses.report');
+    Route::get('/courses/{courseId}/export/{format?}', [GradeController::class, 'exportCourseGrades'])->name('courses.export');
+
+    // ... existing code ...
+});
+
+// Student Routes
+Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' => 'student.'], function () {
+    // ... existing code ...
+
+    // Grades
+    Route::get('/grades', [GradeController::class, 'studentGrades'])->name('grades.index');
+    Route::get('/grades/{courseId}/details', [GradeController::class, 'studentGradeDetails'])->name('grades.details');
+
+    // ... existing code ...
+});

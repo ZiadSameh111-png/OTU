@@ -17,11 +17,13 @@ class Grade extends Model
     protected $fillable = [
         'course_id',
         'student_id',
+        'midterm_grade',
         'assignment_grade',
         'final_grade',
         'submitted',
         'submission_date',
         'updated_by',
+        'comments',
     ];
 
     /**
@@ -30,6 +32,7 @@ class Grade extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'midterm_grade' => 'float',
         'assignment_grade' => 'float',
         'final_grade' => 'float',
         'submitted' => 'boolean',
@@ -67,7 +70,7 @@ class Grade extends Model
      */
     public function getTotalAttribute()
     {
-        return $this->assignment_grade + $this->final_grade;
+        return $this->midterm_grade + $this->assignment_grade + $this->final_grade;
     }
 
     /**
@@ -77,12 +80,12 @@ class Grade extends Model
      */
     public function getLetterGradeAttribute()
     {
-        if (!$this->submitted || is_null($this->assignment_grade) || is_null($this->final_grade)) {
+        if (!$this->submitted || is_null($this->midterm_grade) || is_null($this->assignment_grade) || is_null($this->final_grade)) {
             return '-';
         }
 
         $course = $this->course;
-        $maxTotal = $course->assignment_grade + $course->final_grade;
+        $maxTotal = $course->midterm_grade + $course->assignment_grade + $course->final_grade;
         $percentage = ($this->getTotalAttribute() / $maxTotal) * 100;
 
         if ($percentage >= 95) return 'A+';
@@ -91,8 +94,28 @@ class Grade extends Model
         if ($percentage >= 80) return 'B';
         if ($percentage >= 75) return 'C+';
         if ($percentage >= 70) return 'C';
+        if ($percentage >= 65) return 'D+';
         if ($percentage >= 60) return 'D';
         return 'F';
+    }
+
+    /**
+     * Get the appropriate CSS class for the letter grade badge.
+     * 
+     * @return string
+     */
+    public function getLetterGradeColor()
+    {
+        $letterGrade = $this->getLetterGradeAttribute();
+        
+        if ($letterGrade == '-') return 'secondary';
+        if (in_array($letterGrade, ['A+', 'A'])) return 'success';
+        if (in_array($letterGrade, ['B+', 'B'])) return 'primary';
+        if (in_array($letterGrade, ['C+', 'C'])) return 'info';
+        if (in_array($letterGrade, ['D+', 'D'])) return 'warning';
+        if ($letterGrade == 'F') return 'danger';
+        
+        return 'secondary';
     }
 
     /**

@@ -149,7 +149,7 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         if ($user->role !== 'Student') {
-            return redirect()->route('home')->with('error', 'غير مصرح بالوصول');
+            return redirect()->route('dashboard')->with('error', 'غير مصرح بالوصول');
         }
         
         // For demo purposes, we'll create sample notifications

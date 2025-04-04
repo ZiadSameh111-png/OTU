@@ -111,4 +111,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(AdminRequest::class, 'user_id');
     }
+
+    public function getRoleAttribute()
+    {
+        $firstRole = $this->roles()->first();
+        return $firstRole ? $firstRole->name : null;
+    }
 }

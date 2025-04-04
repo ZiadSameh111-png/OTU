@@ -1,176 +1,217 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1 class="mb-1 text-primary fw-bold">
-                <i class="fas fa-graduation-cap me-2"></i>درجاتي
-            </h1>
-            <p class="text-muted fs-5">عرض الدرجات لجميع المقررات الدراسية الخاصة بك</p>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-12">
+            <div class="card shadow">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h4 class="mb-0">درجاتي</h4>
+                </div>
+                <div class="card-body">
+                    @if(session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
+
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="filters">
+                                <form action="{{ route('student.grades.index') }}" method="GET" class="form-inline justify-content-end">
+                                    <div class="form-group mb-2">
+                                        <label for="status" class="ml-2">فلترة حسب:</label>
+                                        <select name="status" id="status" class="form-control" onchange="this.form.submit()">
+                                            <option value="">الكل</option>
+                                            <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>الدرجات المكتملة</option>
+                                            <option value="not_submitted" {{ request('status') == 'not_submitted' ? 'selected' : '' }}>الدرجات غير المكتملة</option>
+                                        </select>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    @if($grades->isEmpty())
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle ml-1"></i>
+                            لا توجد درجات لعرضها حاليًا.
+                        </div>
+                    @else
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead class="thead-light">
+                                    <tr>
+                                        <th>المقرر</th>
+                                        <th>رمز المقرر</th>
+                                        <th>أستاذ المقرر</th>
+                                        <th>مجموع الدرجات</th>
+                                        <th>التقدير</th>
+                                        <th>الحالة</th>
+                                        <th>التفاصيل</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach($grades as $grade)
+                                        @php
+                                            // Calculate total grades
+                                            $totalGrade = $grade->midterm_grade + $grade->assignment_grade + $grade->final_grade;
+                                            $totalPossible = $grade->course->midterm_grade + $grade->course->assignment_grade + $grade->course->final_grade;
+                                            $percentage = $totalPossible > 0 ? ($totalGrade / $totalPossible) * 100 : 0;
+
+                                            // Get letter grade
+                                            $letterGrade = $grade->getLetterGradeAttribute();
+                                            
+                                            // Determine badge class based on letter grade
+                                            $badgeClass = 'badge-secondary';
+                                            if ($grade->submitted) {
+                                                if (in_array($letterGrade, ['A+', 'A'])) {
+                                                    $badgeClass = 'badge-success';
+                                                } elseif (in_array($letterGrade, ['B+', 'B'])) {
+                                                    $badgeClass = 'badge-primary';
+                                                } elseif (in_array($letterGrade, ['C+', 'C'])) {
+                                                    $badgeClass = 'badge-info';
+                                                } elseif (in_array($letterGrade, ['D+', 'D'])) {
+                                                    $badgeClass = 'badge-warning';
+                                                } elseif ($letterGrade == 'F') {
+                                                    $badgeClass = 'badge-danger';
+                                                }
+                                            }
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $grade->course->name }}</td>
+                                            <td>{{ $grade->course->code }}</td>
+                                            <td>{{ $grade->course->teacher ? $grade->course->teacher->name : 'غير محدد' }}</td>
+                                            <td>
+                                                @if($grade->submitted)
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="progress flex-grow-1 ml-2" style="height: 8px;">
+                                                            <div class="progress-bar bg-{{ $percentage >= 60 ? ($percentage >= 80 ? 'success' : 'info') : 'danger' }}" 
+                                                                role="progressbar" 
+                                                                style="width: {{ $percentage }}%;" 
+                                                                aria-valuenow="{{ $percentage }}" 
+                                                                aria-valuemin="0" 
+                                                                aria-valuemax="100">
+                                                            </div>
+                                                        </div>
+                                                        <span>{{ $totalGrade }}/{{ $totalPossible }}</span>
+                                                    </div>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($grade->submitted)
+                                                    <span class="badge {{ $badgeClass }}">{{ $letterGrade }}</span>
+                                                @else
+                                                    <span class="text-muted">-</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                @if($grade->submitted)
+                                                    <span class="badge badge-success">تم تقديم الدرجات</span>
+                                                @else
+                                                    <span class="badge badge-warning">لم يتم التقديم بعد</span>
+                                                @endif
+                                            </td>
+                                            <td>
+                                                <a href="{{ route('student.grades.details', $grade->course->id) }}" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-eye ml-1"></i> التفاصيل
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-md-6">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">الإحصائيات</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @php
+                                            $submittedCount = $grades->where('submitted', true)->count();
+                                            $pendingCount = $grades->where('submitted', false)->count();
+                                            $totalCount = $grades->count();
+                                            
+                                            $passedCount = 0;
+                                            $totalGradePoints = 0;
+                                            $totalCreditHours = 0;
+                                            
+                                            foreach ($grades as $grade) {
+                                                if ($grade->submitted) {
+                                                    $totalGrade = $grade->midterm_grade + $grade->assignment_grade + $grade->final_grade;
+                                                    $totalPossible = $grade->course->midterm_grade + $grade->course->assignment_grade + $grade->course->final_grade;
+                                                    $percentage = $totalPossible > 0 ? ($totalGrade / $totalPossible) * 100 : 0;
+                                                    
+                                                    if ($percentage >= 60) {
+                                                        $passedCount++;
+                                                    }
+                                                    
+                                                    // Calculate GPA points
+                                                    $gradePoint = 0;
+                                                    if ($percentage >= 95) $gradePoint = 4.0;
+                                                    elseif ($percentage >= 90) $gradePoint = 3.75;
+                                                    elseif ($percentage >= 85) $gradePoint = 3.5;
+                                                    elseif ($percentage >= 80) $gradePoint = 3.0;
+                                                    elseif ($percentage >= 75) $gradePoint = 2.5;
+                                                    elseif ($percentage >= 70) $gradePoint = 2.0;
+                                                    elseif ($percentage >= 65) $gradePoint = 1.5;
+                                                    elseif ($percentage >= 60) $gradePoint = 1.0;
+                                                    
+                                                    $creditHours = $grade->course->credit_hours ?? 3;
+                                                    $totalGradePoints += ($gradePoint * $creditHours);
+                                                    $totalCreditHours += $creditHours;
+                                                }
+                                            }
+                                            
+                                            $successRate = $submittedCount > 0 ? round(($passedCount / $submittedCount) * 100) : 0;
+                                            $gpa = $totalCreditHours > 0 ? round($totalGradePoints / $totalCreditHours, 2) : 0;
+                                        @endphp
+                                        
+                                        <p><strong>إجمالي المقررات:</strong> {{ $totalCount }}</p>
+                                        <p><strong>المقررات المكتملة:</strong> {{ $submittedCount }} ({{ $totalCount > 0 ? round(($submittedCount / $totalCount) * 100) : 0 }}%)</p>
+                                        <p><strong>المقررات المتبقية:</strong> {{ $pendingCount }}</p>
+                                        <p><strong>نسبة النجاح:</strong> {{ $successRate }}%</p>
+                                        <p><strong>المعدل التراكمي التقريبي:</strong> {{ $gpa }} من 4.0</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card shadow-sm">
+                                    <div class="card-header bg-light">
+                                        <h5 class="mb-0">تفسير التقديرات</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <ul class="list-unstyled">
+                                                    <li><span class="badge badge-success">A+</span> - ممتاز مرتفع (95% فأعلى)</li>
+                                                    <li><span class="badge badge-success">A</span> - ممتاز (90% - 94.9%)</li>
+                                                    <li><span class="badge badge-primary">B+</span> - جيد جداً مرتفع (85% - 89.9%)</li>
+                                                    <li><span class="badge badge-primary">B</span> - جيد جداً (80% - 84.9%)</li>
+                                                </ul>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <ul class="list-unstyled">
+                                                    <li><span class="badge badge-info">C+</span> - جيد مرتفع (75% - 79.9%)</li>
+                                                    <li><span class="badge badge-info">C</span> - جيد (70% - 74.9%)</li>
+                                                    <li><span class="badge badge-warning">D+</span> - مقبول مرتفع (65% - 69.9%)</li>
+                                                    <li><span class="badge badge-warning">D</span> - مقبول (60% - 64.9%)</li>
+                                                    <li><span class="badge badge-danger">F</span> - راسب (أقل من 60%)</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
-
-    @if(!$group)
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            أنت غير مسجل في أي مجموعة دراسية. يرجى التواصل مع إدارة النظام.
-        </div>
-    @endif
-
-    @if(count($courses) > 0)
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent">
-                <h5 class="mb-0">
-                    <i class="fas fa-clipboard-list me-2 text-primary"></i>درجات المقررات
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th width="5%">م</th>
-                                <th width="15%">كود المقرر</th>
-                                <th width="25%">اسم المقرر</th>
-                                <th width="15%">الأعمال الفصلية</th>
-                                <th width="15%">الاختبار النهائي</th>
-                                <th width="10%">المجموع</th>
-                                <th width="15%">التقدير</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php $totalPoints = 0; $totalMaxPoints = 0; @endphp
-                            @foreach($courses as $i => $course)
-                                @php
-                                    $grade = $grades->where('course_id', $course->id)->first();
-                                    $assignmentGrade = $grade && $grade->submitted ? $grade->assignment_grade : '-';
-                                    $finalGrade = $grade && $grade->submitted ? $grade->final_grade : '-';
-                                    
-                                    $total = '-';
-                                    $letterGrade = '-';
-                                    
-                                    if($grade && $grade->submitted) {
-                                        $total = $assignmentGrade + $finalGrade;
-                                        $maxTotal = $course->assignment_grade + $course->final_grade;
-                                        $percentage = ($total / $maxTotal) * 100;
-                                        
-                                        // Calculate letter grade based on percentage
-                                        if($percentage >= 90) {
-                                            $letterGrade = 'A';
-                                        } elseif($percentage >= 80) {
-                                            $letterGrade = 'B';
-                                        } elseif($percentage >= 70) {
-                                            $letterGrade = 'C';
-                                        } elseif($percentage >= 60) {
-                                            $letterGrade = 'D';
-                                        } else {
-                                            $letterGrade = 'F';
-                                        }
-                                        
-                                        $totalPoints += $total;
-                                        $totalMaxPoints += $maxTotal;
-                                    }
-                                @endphp
-                                <tr>
-                                    <td>{{ $i + 1 }}</td>
-                                    <td>{{ $course->code ?? 'بدون كود' }}</td>
-                                    <td>{{ $course->name }}</td>
-                                    <td>
-                                        @if($assignmentGrade !== '-')
-                                            <span class="badge bg-light text-dark fs-6">
-                                                {{ $assignmentGrade }} / {{ $course->assignment_grade }}
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary fs-6">غير متاح</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($finalGrade !== '-')
-                                            <span class="badge bg-light text-dark fs-6">
-                                                {{ $finalGrade }} / {{ $course->final_grade }}
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary fs-6">غير متاح</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($total !== '-')
-                                            <span class="badge bg-light text-dark fs-6">
-                                                {{ $total }} / {{ $course->assignment_grade + $course->final_grade }}
-                                            </span>
-                                        @else
-                                            <span class="badge bg-secondary fs-6">غير متاح</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($letterGrade !== '-')
-                                            @php
-                                                $badgeClass = 'bg-success';
-                                                if($letterGrade == 'C') $badgeClass = 'bg-info';
-                                                if($letterGrade == 'D') $badgeClass = 'bg-warning text-dark';
-                                                if($letterGrade == 'F') $badgeClass = 'bg-danger';
-                                            @endphp
-                                            <span class="badge {{ $badgeClass }} fs-6">{{ $letterGrade }}</span>
-                                        @else
-                                            <span class="badge bg-secondary fs-6">غير متاح</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="card-footer bg-transparent">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted mb-3">المعدل التراكمي</h6>
-                                @php
-                                    $gpa = '-';
-                                    if($totalMaxPoints > 0) {
-                                        $percentage = ($totalPoints / $totalMaxPoints) * 100;
-                                        $gpa = number_format($percentage / 20, 2);
-                                    }
-                                @endphp
-                                <h1 class="display-4 fw-bold text-primary">{{ $gpa }}</h1>
-                                <p class="text-muted">من 5.00</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-8">
-                        <div class="card border-0 shadow-sm h-100">
-                            <div class="card-body">
-                                <h6 class="text-muted mb-3">بيان المقررات</h6>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>عدد المقررات المسجلة:</span>
-                                    <span class="fw-bold">{{ count($courses) }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>عدد المقررات المكتملة:</span>
-                                    <span class="fw-bold">{{ $grades->where('submitted', true)->count() }}</span>
-                                </div>
-                                <div class="d-flex justify-content-between">
-                                    <span>عدد المقررات المتبقية:</span>
-                                    <span class="fw-bold">{{ count($courses) - $grades->where('submitted', true)->count() }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @else
-        <div class="card border-0 shadow-sm">
-            <div class="card-body">
-                <div class="text-center py-5">
-                    <img src="https://cdn-icons-png.flaticon.com/512/2866/2866906.png" alt="لا توجد مقررات" style="width: 120px; opacity: 0.5;">
-                    <p class="mt-4 text-muted">لا توجد مقررات دراسية مسجلة لك حاليًا</p>
-                </div>
-            </div>
-        </div>
-    @endif
 </div>
 @endsection 

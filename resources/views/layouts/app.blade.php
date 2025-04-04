@@ -1033,7 +1033,7 @@
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.5s">
-                <a class="nav-link {{ request()->is('student/grades*') ? 'active' : '' }}" href="{{ route('student.grades') }}">
+                <a class="nav-link {{ request()->is('student/grades*') ? 'active' : '' }}" href="{{ route('student.grades.index') }}">
                     <i class="fas fa-graduation-cap"></i>
                     درجاتي
                 </a>

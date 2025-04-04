@@ -31,8 +31,8 @@ class GradeController extends Controller
     public function teacherIndex()
     {
         $teacher = Auth::user();
-        if ($teacher->role !== 'Teacher') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$teacher->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $courses = $teacher->teacherCourses;
@@ -49,8 +49,8 @@ class GradeController extends Controller
     public function manageCourse($courseId)
     {
         $teacher = Auth::user();
-        if ($teacher->role !== 'Teacher') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$teacher->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $course = Course::with(['groups.students'])->findOrFail($courseId);
@@ -75,7 +75,7 @@ class GradeController extends Controller
     public function store(Request $request)
     {
         $teacher = Auth::user();
-        if ($teacher->role !== 'Teacher') {
+        if (!$teacher->hasRole('Teacher')) {
             return response()->json(['error' => 'غير مصرح لك بالوصول إلى هذه الصفحة'], 403);
         }
 
@@ -135,7 +135,7 @@ class GradeController extends Controller
     public function submit(Request $request)
     {
         $teacher = Auth::user();
-        if ($teacher->role !== 'Teacher') {
+        if (!$teacher->hasRole('Teacher')) {
             return response()->json(['error' => 'غير مصرح لك بالوصول إلى هذه الصفحة'], 403);
         }
 
@@ -201,8 +201,8 @@ class GradeController extends Controller
     public function studentIndex()
     {
         $student = Auth::user();
-        if ($student->role !== 'Student') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$student->hasRole('Student')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $group = $student->group;
@@ -228,8 +228,8 @@ class GradeController extends Controller
     public function adminIndex()
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $courses = Course::with('teacher')->get();
@@ -269,8 +269,8 @@ class GradeController extends Controller
     public function adminViewCourse($courseId)
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $course = Course::with(['groups.students', 'teacher'])->findOrFail($courseId);
@@ -287,8 +287,8 @@ class GradeController extends Controller
     public function adminReports()
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $courses = Course::with(['teacher', 'groups', 'grades'])->get();
@@ -369,8 +369,8 @@ class GradeController extends Controller
     public function courseReport($courseId)
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $course = Course::with(['teacher', 'groups.students', 'grades'])->findOrFail($courseId);
@@ -474,8 +474,8 @@ class GradeController extends Controller
     public function groupReport($groupId)
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $group = Group::with(['students', 'courses.teacher'])->findOrFail($groupId);
@@ -580,8 +580,8 @@ class GradeController extends Controller
     public function exportCourseGrades($courseId, $format = 'excel')
     {
         $user = Auth::user();
-        if ($user->role !== 'Admin') {
-            return redirect()->route('home')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
         $course = Course::with(['groups.students', 'grades'])->findOrFail($courseId);
@@ -653,5 +653,251 @@ class GradeController extends Controller
             // This requires a library like PhpSpreadsheet or Maatwebsite/Laravel-Excel
             return redirect()->back()->with('error', 'تصدير Excel غير متاح حاليًا. يرجى استخدام تنسيق CSV.');
         }
+    }
+
+    /**
+     * Export grades report in the specified format.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  string  $format
+     * @return \Illuminate\Http\Response
+     */
+    public function export(Request $request, $format = 'excel')
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // Get filter parameters
+        $courseId = $request->input('course_id');
+        $groupId = $request->input('group_id');
+        $status = $request->input('status');
+
+        // Build query
+        $gradesQuery = Grade::with(['student', 'course']);
+
+        if ($courseId) {
+            $gradesQuery->where('course_id', $courseId);
+        }
+
+        if ($groupId) {
+            $gradesQuery->whereHas('student', function($query) use ($groupId) {
+                $query->where('group_id', $groupId);
+            });
+        }
+
+        if ($status === 'submitted') {
+            $gradesQuery->where('submitted', true);
+        } elseif ($status === 'not_submitted') {
+            $gradesQuery->where('submitted', false);
+        }
+
+        $grades = $gradesQuery->get();
+
+        // Format data for export
+        $exportData = [];
+        
+        foreach ($grades as $grade) {
+            $student = $grade->student;
+            $course = $grade->course;
+            
+            if (!$student || !$course) continue;
+            
+            // Calculate totals
+            $totalGrade = $grade->midterm_grade + $grade->assignment_grade + $grade->final_grade;
+            $totalPossible = $course->midterm_grade + $course->assignment_grade + $course->final_grade;
+            
+            $row = [
+                'student_id' => $student->student_id ?? $student->id,
+                'student_name' => $student->name,
+                'course_name' => $course->name,
+                'course_code' => $course->code,
+                'midterm_grade' => $grade->midterm_grade ?? '-',
+                'assignment_grade' => $grade->assignment_grade ?? '-',
+                'final_grade' => $grade->final_grade ?? '-',
+                'total_grade' => $totalGrade . '/' . $totalPossible,
+                'letter_grade' => $grade->getLetterGradeAttribute() ?? '-',
+                'submitted' => $grade->submitted ? 'نعم' : 'لا',
+                'submission_date' => $grade->submission_date ? $grade->submission_date->format('Y-m-d') : '-',
+            ];
+            
+            $exportData[] = $row;
+        }
+        
+        $fileName = 'grades_report_' . date('Ymd');
+        
+        // Handle different export formats
+        if ($format == 'pdf') {
+            // Implementation for PDF export would go here
+            return redirect()->back()->with('error', 'تصدير PDF غير متاح حاليًا');
+        } elseif ($format == 'csv') {
+            $headers = [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $fileName . '.csv"',
+            ];
+            
+            $callback = function() use ($exportData) {
+                $file = fopen('php://output', 'w');
+                
+                // Add CSV headers with proper encoding for Arabic
+                fputcsv($file, [
+                    'رقم الطالب',
+                    'اسم الطالب',
+                    'اسم المقرر',
+                    'رمز المقرر',
+                    'درجة الاختبارات الشهرية',
+                    'درجة الأعمال العملية',
+                    'الدرجة النهائية',
+                    'الدرجة الكلية',
+                    'التقدير',
+                    'مثبتة',
+                    'تاريخ التثبيت'
+                ]);
+                
+                foreach ($exportData as $row) {
+                    fputcsv($file, $row);
+                }
+                
+                fclose($file);
+            };
+            
+            return response()->stream($callback, 200, $headers);
+        } else { // default to excel
+            // Implementation for Excel export would go here
+            return redirect()->back()->with('error', 'تصدير Excel غير متاح حاليًا. يرجى استخدام تنسيق CSV.');
+        }
+    }
+
+    /**
+     * Display list of grades for a student.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function studentGrades()
+    {
+        $student = Auth::user();
+        if (!$student->hasRole('Student')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        // Get filter
+        $status = request('status');
+        
+        // Build query
+        $gradesQuery = Grade::with('course')
+                          ->where('student_id', $student->id);
+        
+        if ($status === 'submitted') {
+            $gradesQuery->where('submitted', true);
+        } elseif ($status === 'not_submitted') {
+            $gradesQuery->where('submitted', false);
+        }
+        
+        $grades = $gradesQuery->get();
+        
+        return view('student.grades.index', compact('grades'));
+    }
+    
+    /**
+     * Display detailed grade information for a specific course for a student.
+     *
+     * @param  int  $courseId
+     * @return \Illuminate\Http\Response
+     */
+    public function studentGradeDetails($courseId)
+    {
+        $student = Auth::user();
+        if (!$student->hasRole('Student')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+        
+        $course = Course::findOrFail($courseId);
+        $grade = Grade::where('course_id', $courseId)
+                    ->where('student_id', $student->id)
+                    ->firstOrFail();
+        
+        return view('student.grades.details', compact('course', 'grade'));
+    }
+
+    /**
+     * Show the form for editing a grade for admin.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function edit($id)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+        
+        $grade = Grade::with(['student', 'course'])->findOrFail($id);
+        
+        // Add edit log history
+        $editLogs = DB::table('grade_edit_logs')
+                    ->where('grade_id', $id)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+        
+        $grade->edit_logs = $editLogs;
+        
+        return view('admin.grades.edit', compact('grade'));
+    }
+
+    /**
+     * Update a grade as admin.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function update(Request $request, $id)
+    {
+        $user = Auth::user();
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+        
+        $grade = Grade::findOrFail($id);
+        
+        // Validate request
+        $request->validate([
+            'midterm_grade' => 'required|numeric|min:0|max:' . $grade->course->midterm_grade,
+            'assignment_grade' => 'required|numeric|min:0|max:' . $grade->course->assignment_grade,
+            'final_grade' => 'required|numeric|min:0|max:' . $grade->course->final_grade,
+            'edit_reason' => 'required|string|max:500',
+        ]);
+        
+        // Store old values for log
+        $oldMidterm = $grade->midterm_grade;
+        $oldAssignment = $grade->assignment_grade;
+        $oldFinal = $grade->final_grade;
+        
+        // Update grade
+        $grade->midterm_grade = $request->midterm_grade;
+        $grade->assignment_grade = $request->assignment_grade;
+        $grade->final_grade = $request->final_grade;
+        $grade->comments = $request->comments;
+        $grade->updated_by = $user->id;
+        $grade->save();
+        
+        // Add to edit log
+        DB::table('grade_edit_logs')->insert([
+            'grade_id' => $grade->id,
+            'user_id' => $user->id,
+            'old_midterm_grade' => $oldMidterm,
+            'old_assignment_grade' => $oldAssignment,
+            'old_final_grade' => $oldFinal,
+            'new_midterm_grade' => $grade->midterm_grade,
+            'new_assignment_grade' => $grade->assignment_grade,
+            'new_final_grade' => $grade->final_grade,
+            'reason' => $request->edit_reason,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        
+        return redirect()->route('admin.grades.reports')->with('success', 'تم تعديل الدرجات بنجاح');
     }
 }
