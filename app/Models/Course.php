@@ -47,4 +47,12 @@ class Course extends Model
     {
         return $this->hasMany(Grade::class);
     }
+
+    /**
+     * Get the exams for this course.
+     */
+    public function exams()
+    {
+        return $this->hasMany(Exam::class);
+    }
 }

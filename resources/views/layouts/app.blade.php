@@ -954,6 +954,13 @@
                     تقارير الدرجات
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.65s">
+                <a class="nav-link {{ request()->is('admin/exams/reports*') ? 'active' : '' }}" href="{{ route('admin.exams.reports') }}">
+                    <i class="fas fa-file-alt"></i>
+                    تقارير الاختبارات
+                </a>
+            </li>
             @endif
 
             @if(auth()->check() && auth()->user()->hasRole('Teacher'))
@@ -984,6 +991,20 @@
                 <a class="nav-link {{ request()->is('teacher/grades*') ? 'active' : '' }}" href="{{ route('teacher.grades.index') }}">
                     <i class="fas fa-clipboard-check"></i>
                     إدارة الدرجات
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.35s">
+                <a class="nav-link {{ request()->is('teacher/exams') || request()->is('teacher/exams/create') || request()->is('teacher/exams/*/edit') ? 'active' : '' }}" href="{{ route('teacher.exams.index') }}">
+                    <i class="fas fa-file-alt"></i>
+                    إدارة الاختبارات
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.4s">
+                <a class="nav-link {{ request()->is('teacher/exams/grading*') ? 'active' : '' }}" href="{{ route('teacher.exams.grading') }}">
+                    <i class="fas fa-pen"></i>
+                    تصحيح الاختبارات
                 </a>
             </li>
             @endif
@@ -1038,14 +1059,21 @@
                     درجاتي
                 </a>
             </li>
-            @endif
-            
-            <li class="nav-item fade-in" style="animation-delay: 0.5s">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-chart-bar"></i>
-                    الإحصاءات
+
+            <li class="nav-item fade-in" style="animation-delay: 0.55s">
+                <a class="nav-link {{ request()->is('student/exams') || request()->is('student/exams/*/take') ? 'active' : '' }}" href="{{ route('student.exams.index') }}">
+                    <i class="fas fa-file-alt"></i>
+                    الاختبارات الإلكترونية
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.6s">
+                <a class="nav-link {{ request()->is('student/exams/results*') ? 'active' : '' }}" href="{{ route('student.exams.results') }}">
+                    <i class="fas fa-poll"></i>
+                    نتائج الاختبارات
+                </a>
+            </li>
+            @endif
             
             <li class="nav-item mt-auto fade-in" style="animation-delay: 0.7s">
                 <form method="POST" action="{{ route('logout') }}">

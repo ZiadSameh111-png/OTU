@@ -45,4 +45,12 @@ class Group extends Model
     {
         return $this->hasMany(Schedule::class);
     }
+
+    /**
+     * العلاقة مع الاختبارات المخصصة للمجموعة
+     */
+    public function exams()
+    {
+        return $this->hasMany(Exam::class);
+    }
 }

@@ -158,6 +158,7 @@ Route::middleware(['auth'])->group(function () {
     // روابط عرض المقررات للمدرسين - متاحة للمدرسين فقط
     Route::middleware(['role:Teacher'])->group(function () {
         Route::get('/teacher/courses', [App\Http\Controllers\CourseController::class, 'teacherCourses'])->name('courses.teacher');
+        Route::get('/teacher/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('teacher.dashboard');
         
         // Teacher message routes
         Route::get('/teacher/messages', [App\Http\Controllers\MessageController::class, 'teacherIndex'])->name('teacher.messages');
@@ -186,6 +187,18 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/teacher/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'manageCourse'])->name('teacher.grades.manage');
         Route::post('/teacher/grades/course/{course}/update', [App\Http\Controllers\GradeController::class, 'updateBatch'])->name('teacher.grades.update.batch');
         Route::post('/teacher/grades/course/{course}/submit', [App\Http\Controllers\GradeController::class, 'submitFinal'])->name('teacher.grades.submit.final');
+
+        // Teacher Exam Routes
+        Route::get('/teacher/exams', [App\Http\Controllers\ExamController::class, 'teacherIndex'])->name('teacher.exams.index');
+        Route::get('/teacher/exams/create', [App\Http\Controllers\ExamController::class, 'create'])->name('teacher.exams.create');
+        Route::post('/teacher/exams', [App\Http\Controllers\ExamController::class, 'store'])->name('teacher.exams.store');
+        Route::get('/teacher/exams/{exam}/edit', [App\Http\Controllers\ExamController::class, 'edit'])->name('teacher.exams.edit');
+        Route::put('/teacher/exams/{exam}', [App\Http\Controllers\ExamController::class, 'update'])->name('teacher.exams.update');
+        Route::delete('/teacher/exams/{exam}', [App\Http\Controllers\ExamController::class, 'destroy'])->name('teacher.exams.destroy');
+        Route::put('/teacher/exams/{exam}/publish', [App\Http\Controllers\ExamController::class, 'publish'])->name('teacher.exams.publish');
+        Route::put('/teacher/exams/{exam}/unpublish', [App\Http\Controllers\ExamController::class, 'unpublish'])->name('teacher.exams.unpublish');
+        Route::post('/teacher/exams/{exam}/questions', [App\Http\Controllers\ExamController::class, 'addQuestion'])->name('teacher.exams.questions.add');
+        Route::get('/teacher/exams/grading', [App\Http\Controllers\ExamController::class, 'grading'])->name('teacher.exams.grading');
     });
 
     // Grade Management Routes
@@ -284,6 +297,12 @@ Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'a
     Route::get('/courses/{courseId}/report', [GradeController::class, 'courseReport'])->name('courses.report');
     Route::get('/courses/{courseId}/export/{format?}', [GradeController::class, 'exportCourseGrades'])->name('courses.export');
 
+    // Exam Reports
+    Route::get('/exams/reports', [App\Http\Controllers\ExamController::class, 'adminReportsIndex'])->name('exams.reports');
+    Route::get('/exams/reports/{id}', [App\Http\Controllers\ExamController::class, 'adminReportShow'])->name('exams.reports.show');
+    Route::get('/exams/reports/{id}/export/{format?}', [App\Http\Controllers\ExamController::class, 'exportResults'])->name('exams.reports.export');
+    Route::get('/exams/reports/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'viewStudentAttempt'])->name('exams.reports.student');
+
     // ... existing code ...
 });
 
@@ -295,5 +314,36 @@ Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' =
     Route::get('/grades', [GradeController::class, 'studentGrades'])->name('grades.index');
     Route::get('/grades/{courseId}/details', [GradeController::class, 'studentGradeDetails'])->name('grades.details');
 
+    // Exams
+    Route::get('/exams', [App\Http\Controllers\ExamController::class, 'studentIndex'])->name('exams.index');
+    Route::get('/exams/{id}/start', [App\Http\Controllers\ExamController::class, 'startExam'])->name('exams.start');
+    Route::get('/exams/{id}/take', [App\Http\Controllers\ExamController::class, 'takeExam'])->name('exams.take');
+    Route::post('/exams/save-answer', [App\Http\Controllers\ExamController::class, 'saveAnswer'])->name('exams.save-answer');
+    Route::post('/exams/{id}/submit', [App\Http\Controllers\ExamController::class, 'submitExam'])->name('exams.submit');
+    
+    // Exam Results
+    Route::get('/exams/results', [App\Http\Controllers\ExamController::class, 'studentResults'])->name('exams.results');
+    Route::get('/exams/results/{id}', [App\Http\Controllers\ExamController::class, 'viewResults'])->name('exams.results.view');
+
     // ... existing code ...
+});
+
+// Teacher Routes
+Route::group(['middleware' => ['auth', 'teacher'], 'prefix' => 'teacher', 'as' => 'teacher.'], function () {
+    // Add exam management routes for teachers
+    Route::get('/exams', [App\Http\Controllers\ExamController::class, 'teacherIndex'])->name('exams.index');
+    Route::get('/exams/create', [App\Http\Controllers\ExamController::class, 'create'])->name('exams.create');
+    Route::post('/exams', [App\Http\Controllers\ExamController::class, 'store'])->name('exams.store');
+    Route::get('/exams/{id}/edit', [App\Http\Controllers\ExamController::class, 'edit'])->name('exams.edit');
+    Route::post('/exams/{id}/add-question', [App\Http\Controllers\ExamController::class, 'addQuestion'])->name('exams.add-question');
+    Route::put('/exams/questions/{id}', [App\Http\Controllers\ExamController::class, 'updateQuestion'])->name('exams.update-question');
+    Route::delete('/exams/questions/{id}', [App\Http\Controllers\ExamController::class, 'removeQuestion'])->name('exams.remove-question');
+    Route::put('/exams/{id}/publish', [App\Http\Controllers\ExamController::class, 'publish'])->name('exams.publish');
+    Route::put('/exams/{id}/unpublish', [App\Http\Controllers\ExamController::class, 'unpublish'])->name('exams.unpublish');
+    
+    // Exam grading routes
+    Route::get('/exams/grading', [App\Http\Controllers\ExamController::class, 'teacherGradingIndex'])->name('exams.grading');
+    Route::get('/exams/grading/{id}', [App\Http\Controllers\ExamController::class, 'teacherGradingShow'])->name('exams.grading.show');
+    Route::get('/exams/grading/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'gradeOpenEndedQuestions'])->name('exams.grading.open-ended');
+    Route::post('/exams/grading/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'saveOpenEndedGrades'])->name('exams.grading.save');
 });

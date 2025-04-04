@@ -117,4 +117,42 @@ class User extends Authenticatable
         $firstRole = $this->roles()->first();
         return $firstRole ? $firstRole->name : null;
     }
+
+    /**
+     * Get the exams created by this user (for teachers).
+     */
+    public function createdExams()
+    {
+        return $this->hasMany(Exam::class, 'teacher_id');
+    }
+
+    /**
+     * Get the exam attempts by this user (for students).
+     */
+    public function examAttempts()
+    {
+        return $this->hasMany(StudentExamAttempt::class, 'student_id');
+    }
+
+    /**
+     * Get the exam answers by this user (for students).
+     */
+    public function examAnswers()
+    {
+        return $this->hasMany(StudentExamAnswer::class, 'student_id');
+    }
+
+    /**
+     * Get exams available to this student based on their group.
+     */
+    public function availableExams()
+    {
+        if (!$this->group_id || !$this->hasRole('Student')) {
+            return collect();
+        }
+
+        return Exam::where('group_id', $this->group_id)
+            ->where('is_published', true)
+            ->get();
+    }
 }
