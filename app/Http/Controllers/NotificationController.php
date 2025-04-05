@@ -4,13 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\AdminRequest;
-use App\Models\Message;
-use App\Models\Course;
-use App\Models\Schedule;
-use App\Models\Fee;
-use Carbon\Carbon;
+use App\Models\Notification;
 use App\Models\User;
+use App\Models\Group;
+use App\Models\Course;
+use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
@@ -25,171 +23,109 @@ class NotificationController extends Controller
     }
 
     /**
-     * Display notifications for admin.
+     * Display a listing of notifications for the authenticated user.
      *
      * @return \Illuminate\Http\Response
      */
-    public function adminIndex()
+    public function index()
     {
-        // Get admin notifications (pending requests, teacher absences, etc.)
-        $notifications = [];
-        $today = Carbon::today();
-
-        // Add notification for pending requests
-        $pendingRequests = AdminRequest::where('status', 'pending')->count();
-        if ($pendingRequests > 0) {
-            $notifications[] = [
-                'id' => 'req-' . uniqid(),
-                'type' => 'request',
-                'message' => 'لديك ' . $pendingRequests . ' طلب إداري معلق بحاجة للمراجعة',
-                'date' => Carbon::now()->subHours(2),
-                'link' => route('admin.requests'),
-                'is_read' => false
-            ];
+        $user = Auth::user();
+        $role = strtolower($user->role);
+        
+        // Get notifications for this user
+        $notifications = Notification::forUser($user->id)
+            ->orWhere(function($query) use ($role) {
+                $query->where('receiver_type', 'role')
+                      ->where('role', $role);
+            });
+        
+        // Only include group notifications if the user has a groups relationship
+        if (method_exists($user, 'groups') && $user->groups !== null) {
+            $notifications = $notifications->orWhere(function($query) use ($user) {
+                $query->where('receiver_type', 'group')
+                      ->whereIn('group_id', $user->groups->pluck('id'));
+            });
+        } elseif ($user->group) {
+            // If user has a single group relationship instead
+            $notifications = $notifications->orWhere(function($query) use ($user) {
+                $query->where('receiver_type', 'group')
+                      ->where('group_id', $user->group->id);
+            });
         }
-
-        // Add notification for teacher absences
-        $teacherAbsences = \App\Models\TeacherAttendance::whereDate('date', $today)
-            ->where('status', 'absent')
-            ->count();
+        
+        $notifications = $notifications->orderBy('created_at', 'desc')
+            ->paginate(10);
             
-        if ($teacherAbsences > 0) {
-            $notifications[] = [
-                'id' => 'att-' . uniqid(),
-                'type' => 'attendance',
-                'message' => 'هناك ' . $teacherAbsences . ' دكتور متغيب اليوم',
-                'date' => Carbon::now()->subHours(1),
-                'link' => route('admin.attendance'),
-                'is_read' => false
-            ];
+        $unread_count = Notification::forUser($user->id)->unread()->count();
+        
+        if ($user->role === 'Admin') {
+            return view('admin.notifications.index', compact('notifications', 'unread_count'));
+        } elseif ($user->role === 'Teacher') {
+            return view('teacher.notifications.index', compact('notifications', 'unread_count'));
+        } else {
+            return view('student.notifications.index', compact('notifications', 'unread_count'));
         }
-
-        // Add notification for upcoming events
-        $upcomingEvents = Schedule::whereBetween('date', [$today, $today->copy()->addDays(3)])
-            ->count();
-            
-        if ($upcomingEvents > 0) {
-            $notifications[] = [
-                'id' => 'evt-' . uniqid(),
-                'type' => 'schedule',
-                'message' => 'هناك ' . $upcomingEvents . ' محاضرة في الأيام الثلاثة القادمة',
-                'date' => Carbon::now()->subDays(1),
-                'link' => route('schedules.index'),
-                'is_read' => false
-            ];
-        }
-
-        // Sort notifications by date (newest first)
-        usort($notifications, function($a, $b) {
-            return $b['date']->timestamp - $a['date']->timestamp;
-        });
-
-        return view('admin.notifications.index', compact('notifications'));
     }
 
     /**
-     * Display notifications for teacher.
+     * Store a newly created notification.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function teacherIndex()
+    public function store(Request $request)
     {
-        $user = Auth::user();
-        $today = Carbon::today();
-        $notifications = [];
-
-        // Check for unread messages
-        $unreadMessages = Message::where('receiver_id', $user->id)
-            ->whereNull('read_at')
-            ->count();
-            
-        if ($unreadMessages > 0) {
-            $notifications[] = [
-                'id' => 'msg-' . uniqid(),
-                'type' => 'message',
-                'message' => 'لديك ' . $unreadMessages . ' رسائل جديدة غير مقروءة',
-                'date' => Carbon::now()->subHours(2),
-                'link' => route('teacher.messages'),
-                'is_read' => false
-            ];
-        }
-
-        // Check for today's classes
-        $teacherCourses = Course::where('teacher_id', $user->id)->pluck('id')->toArray();
-        $todayClasses = Schedule::whereIn('course_id', $teacherCourses)
-            ->whereDate('date', $today)
-            ->count();
-            
-        if ($todayClasses > 0) {
-            $notifications[] = [
-                'id' => 'sch-' . uniqid(),
-                'type' => 'schedule',
-                'message' => 'لديك ' . $todayClasses . ' محاضرات مجدولة اليوم',
-                'date' => Carbon::today(),
-                'link' => route('teacher.schedule'),
-                'is_read' => false
-            ];
-        }
-
-        // Sort notifications by date (newest first)
-        usort($notifications, function($a, $b) {
-            return $b['date']->timestamp - $a['date']->timestamp;
-        });
-
-        return view('teacher.notifications.index', compact('notifications'));
-    }
-
-    /**
-     * Display a listing of the notifications for the logged-in student.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function studentIndex()
-    {
+        $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'receiver_type' => 'required|in:user,group,role',
+            'notification_type' => 'required|in:general,academic,announcement,exam',
+        ]);
+        
         $user = Auth::user();
         
-        if ($user->role !== 'Student') {
-            return redirect()->route('dashboard')->with('error', 'غير مصرح بالوصول');
-        }
-        
-        // For demo purposes, we'll create sample notifications
-        // In a real application, these would come from a database table
-        $notifications = [
-            [
-                'id' => 1,
-                'type' => 'schedule',
-                'message' => 'تم تحديث جدولك الدراسي للفصل الحالي',
-                'date' => Carbon::now()->subDays(1),
-                'is_read' => false,
-                'link' => route('student.schedule')
-            ],
-            [
-                'id' => 2,
-                'type' => 'message',
-                'message' => 'رسالة جديدة من الإدارة بخصوص امتحانات منتصف الفصل',
-                'date' => Carbon::now()->subDays(3),
-                'is_read' => true,
-                'link' => '#'
-            ],
-            [
-                'id' => 3,
-                'type' => 'request',
-                'message' => 'تم الموافقة على طلب الغياب الخاص بك',
-                'date' => Carbon::now()->subDays(5),
-                'is_read' => true,
-                'link' => '#'
-            ],
-            [
-                'id' => 4,
-                'type' => 'fee',
-                'message' => 'تذكير: موعد سداد الرسوم الدراسية خلال أسبوع',
-                'date' => Carbon::now()->subHours(12),
-                'is_read' => false,
-                'link' => '#'
-            ]
+        // Create base notification data
+        $notificationData = [
+            'title' => $request->title,
+            'description' => $request->description,
+            'sender_id' => $user->id,
+            'receiver_type' => $request->receiver_type,
+            'notification_type' => $request->notification_type,
+            'url' => $request->url,
         ];
         
-        return view('student.notifications.index', compact('notifications'));
+        // Handle different receiver types
+        if ($request->receiver_type === 'user') {
+            $request->validate(['receiver_id' => 'required|exists:users,id']);
+            $notificationData['receiver_id'] = $request->receiver_id;
+            
+            Notification::create($notificationData);
+        } elseif ($request->receiver_type === 'group') {
+            $request->validate(['group_id' => 'required|exists:groups,id']);
+            $notificationData['group_id'] = $request->group_id;
+            
+            Notification::create($notificationData);
+        } elseif ($request->receiver_type === 'role') {
+            $request->validate(['role' => 'required|in:admin,teacher,student']);
+            $notificationData['role'] = $request->role;
+            
+            Notification::create($notificationData);
+        }
+        
+        return redirect()->back()->with('success', 'تم إرسال الإشعار بنجاح');
+    }
+
+    /**
+     * Display the form to create a new notification.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        $users = User::orderBy('name')->get();
+        $groups = Group::orderBy('name')->get();
+        
+        return view('admin.notifications.create', compact('users', 'groups'));
     }
 
     /**
@@ -200,8 +136,81 @@ class NotificationController extends Controller
      */
     public function markAsRead($id)
     {
-        // In a real application, you would update the database record
+        $notification = Notification::findOrFail($id);
+        $user = Auth::user();
+        
+        // Check if the notification is for this user
+        $isForUser = $notification->receiver_id === $user->id;
+        
+        // Check if the notification is for the user's role
+        $isForRole = $notification->receiver_type === 'role' && 
+                    $notification->role === strtolower($user->role);
+        
+        // Check if the notification is for the user's group
+        $isForGroup = false;
+        if ($notification->receiver_type === 'group') {
+            if (method_exists($user, 'groups') && $user->groups !== null) {
+                $isForGroup = $user->groups->contains('id', $notification->group_id);
+            } elseif ($user->group) {
+                $isForGroup = $user->group->id === $notification->group_id;
+            }
+        }
+        
+        // Mark as read if any condition is true
+        if ($isForUser || $isForRole || $isForGroup) {
+            $notification->markAsRead();
+        }
         
         return redirect()->back()->with('success', 'تم تحديث حالة الإشعار');
+    }
+
+    /**
+     * Mark all notifications as read for the current user.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function markAllAsRead()
+    {
+        $user = Auth::user();
+        $role = strtolower($user->role);
+        
+        // Get group IDs if available
+        $userGroupIds = [];
+        if (method_exists($user, 'groups') && $user->groups !== null) {
+            $userGroupIds = $user->groups->pluck('id')->toArray();
+        } elseif ($user->group) {
+            $userGroupIds = [$user->group->id];
+        }
+        
+        // Mark personal notifications as read
+        Notification::where('receiver_id', $user->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+            
+        // We can't mark role/group notifications read for everyone,
+        // so we'll create a separate user notification record to track read status
+        // This would require a more complex design in a real application
+        
+        return redirect()->back()->with('success', 'تم تحديث حالة جميع الإشعارات');
+    }
+
+    /**
+     * Remove the specified notification.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy($id)
+    {
+        $notification = Notification::findOrFail($id);
+        $user = Auth::user();
+        
+        // Only delete if user is admin or the notification's sender
+        if ($user->role === 'Admin' || $notification->sender_id === $user->id) {
+            $notification->delete();
+            return redirect()->back()->with('success', 'تم حذف الإشعار بنجاح');
+        }
+        
+        return redirect()->back()->with('error', 'غير مصرح بحذف هذا الإشعار');
     }
 }

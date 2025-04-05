@@ -93,9 +93,10 @@ class StudentExamAttempt extends Model
     /**
      * Calculate time remaining for the attempt (in minutes).
      *
+     * @param  bool  $respectExamEndTime  Whether to consider the exam end time
      * @return int
      */
-    public function timeRemaining()
+    public function timeRemaining($respectExamEndTime = true)
     {
         if (!$this->start_time || $this->status === 'submitted' || $this->status === 'graded') {
             return 0;
@@ -106,17 +107,50 @@ class StudentExamAttempt extends Model
             return 0;
         }
         
+        $now = Carbon::now();
+        
         // Calculate the expected end time based on start time and exam duration
         $expectedEndTime = $this->start_time->copy()->addMinutes($exam->duration);
         
-        // If exam end time is earlier than the expected end time based on duration,
-        // use the exam end time as the cutoff
-        $endTime = $expectedEndTime->min($exam->end_time);
+        // If we need to respect the exam end time
+        if ($respectExamEndTime) {
+            // Return the time remaining until exam end time if it's earlier
+            // than the expected attempt end time
+            if ($now->lessThan($exam->end_time)) {
+                // Return the minimum of time remaining for attempt and time remaining until exam end
+                $attemptTimeRemaining = $now->diffInMinutes($expectedEndTime, false);
+                $examTimeRemaining = $now->diffInMinutes($exam->end_time, false);
+                
+                return max(0, min($attemptTimeRemaining, $examTimeRemaining));
+            } else {
+                // Exam has ended
+                return 0;
+            }
+        } else {
+            // Don't consider exam end time, just calculate based on attempt duration
+            $remainingMinutes = $now->diffInMinutes($expectedEndTime, false);
+            return max(0, $remainingMinutes);
+        }
+    }
+    
+    /**
+     * Calculate time remaining until exam end time (in minutes).
+     *
+     * @return int
+     */
+    public function timeRemainingUntilExamEnd()
+    {
+        $exam = $this->exam;
+        if (!$exam) {
+            return 0;
+        }
         
         $now = Carbon::now();
-        $remainingMinutes = $now->diffInMinutes($endTime, false);
+        if ($now->greaterThan($exam->end_time)) {
+            return 0;
+        }
         
-        return max(0, $remainingMinutes);
+        return $now->diffInMinutes($exam->end_time, false);
     }
 
     /**

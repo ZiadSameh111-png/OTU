@@ -30,7 +30,7 @@
                         <div class="card-body">
                             <form method="GET" action="{{ route('admin.exams.reports') }}">
                                 <div class="row">
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label for="course_id">المقرر</label>
                                         <select class="form-control" id="course_id" name="course_id">
                                             <option value="">الكل</option>
@@ -41,7 +41,7 @@
                                             @endforeach
                                         </select>
                                     </div>
-                                    <div class="col-md-3 mb-3">
+                                    <div class="col-md-6 mb-3">
                                         <label for="group_id">المجموعة</label>
                                         <select class="form-control" id="group_id" name="group_id">
                                             <option value="">الكل</option>
@@ -51,14 +51,6 @@
                                                 </option>
                                             @endforeach
                                         </select>
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label for="date_from">من تاريخ</label>
-                                        <input type="date" class="form-control" id="date_from" name="date_from" value="{{ request('date_from') }}">
-                                    </div>
-                                    <div class="col-md-3 mb-3">
-                                        <label for="date_to">إلى تاريخ</label>
-                                        <input type="date" class="form-control" id="date_to" name="date_to" value="{{ request('date_to') }}">
                                     </div>
                                     <div class="col-md-12">
                                         <button type="submit" class="btn btn-primary">
@@ -138,9 +130,16 @@
                                             <td>{{ number_format($exam->highest_score, 1) }}%</td>
                                             <td>{{ number_format($exam->lowest_score, 1) }}%</td>
                                             <td>
-                                                <a href="{{ route('admin.exams.report.detail', $exam->id) }}" class="btn btn-sm btn-info">
+                                                <a href="{{ route('admin.exams.reports.show', $exam->id) }}" class="btn btn-sm btn-info">
                                                     <i class="fas fa-eye"></i> التفاصيل
                                                 </a>
+                                                <form action="{{ route('admin.exams.destroy', $exam->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('هل أنت متأكد من حذف هذا الاختبار بشكل نهائي؟')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-danger">
+                                                        <i class="fas fa-trash"></i> حذف
+                                                    </button>
+                                                </form>
                                             </td>
                                         </tr>
                                     @endforeach

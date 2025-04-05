@@ -67,8 +67,6 @@ class ExamController extends Controller
             'title' => 'required|string|max:255',
             'course_id' => 'required|exists:courses,id',
             'group_id' => 'required|exists:groups,id',
-            'start_time' => 'required|date',
-            'end_time' => 'required|date|after:start_time',
             'duration' => 'required|integer|min:1',
             'question_type' => 'required|in:multiple_choice,true_false,open_ended,mixed',
         ]);
@@ -101,12 +99,11 @@ class ExamController extends Controller
         $exam->course_id = $request->course_id;
         $exam->group_id = $request->group_id;
         $exam->teacher_id = Auth::id();
-        $exam->start_time = $request->start_time;
-        $exam->end_time = $request->end_time;
         $exam->duration = $request->duration;
         $exam->question_type = $request->question_type;
         $exam->status = 'pending';
         $exam->is_published = false;
+        $exam->is_open = false;
         $exam->save();
 
         return redirect()->route('teacher.exams.edit', $exam->id)
@@ -149,6 +146,12 @@ class ExamController extends Controller
                 ->with('error', 'غير مصرح لك بتعديل هذا الاختبار');
         }
 
+        // Validate that the exam is not published
+        if ($exam->is_published) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن تعديل اختبار تم نشره بالفعل');
+        }
+
         $questionType = $request->question_type;
         
         $rules = [
@@ -159,9 +162,9 @@ class ExamController extends Controller
         
         // Add additional validation based on question type
         if ($questionType === 'multiple_choice') {
-            $rules['options'] = 'required|array|min:2|max:4';
+            $rules['options'] = 'required|array';
             $rules['options.*'] = 'required|string';
-            $rules['correct_answer'] = 'required|string';
+            $rules['correct_answer'] = 'required|string|in:a,b,c,d';
         } elseif ($questionType === 'true_false') {
             $rules['correct_answer'] = 'required|in:true,false';
         }
@@ -199,12 +202,43 @@ class ExamController extends Controller
         $exam->total_marks = ExamQuestion::where('exam_id', $examId)->sum('marks');
         $exam->save();
         
-        return redirect()->route('teacher.exams.edit', $examId)
-            ->with('success', 'تم إضافة السؤال بنجاح');
+        return redirect()->back()->with('success', 'تم إضافة السؤال بنجاح');
     }
 
     /**
-     * Update an existing question.
+     * Get question data for editing via AJAX.
+     *
+     * @param  int  $questionId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getQuestionData($questionId)
+    {
+        $question = ExamQuestion::findOrFail($questionId);
+        
+        // Check if the teacher is authorized to edit this question
+        if ($question->exam->teacher_id != Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'غير مصرح لك بتعديل هذا السؤال'
+            ], 403);
+        }
+        
+        // Check if the exam is published
+        if ($question->exam->is_published) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن تعديل أسئلة اختبار تم نشره بالفعل'
+            ], 403);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'question' => $question
+        ]);
+    }
+
+    /**
+     * Update a specific question.
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $questionId
@@ -215,13 +249,19 @@ class ExamController extends Controller
         $question = ExamQuestion::findOrFail($questionId);
         $exam = $question->exam;
         
-        // Check if the teacher is authorized to edit this exam
+        // Check if the teacher is authorized to edit this question
         if ($exam->teacher_id != Auth::id()) {
             return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بتعديل هذا الاختبار');
+                ->with('error', 'غير مصرح لك بتعديل هذا السؤال');
         }
-
-        $questionType = $question->question_type; // Keep the original question type
+        
+        // Check if the exam is published
+        if ($exam->is_published) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن تعديل أسئلة اختبار تم نشره بالفعل');
+        }
+        
+        $questionType = $question->question_type; // We don't allow changing the question type
         
         $rules = [
             'question_text' => 'required|string',
@@ -230,9 +270,9 @@ class ExamController extends Controller
         
         // Add additional validation based on question type
         if ($questionType === 'multiple_choice') {
-            $rules['options'] = 'required|array|min:2|max:4';
+            $rules['options'] = 'required|array';
             $rules['options.*'] = 'required|string';
-            $rules['correct_answer'] = 'required|string';
+            $rules['correct_answer'] = 'required|string|in:a,b,c,d';
         } elseif ($questionType === 'true_false') {
             $rules['correct_answer'] = 'required|in:true,false';
         }
@@ -281,7 +321,13 @@ class ExamController extends Controller
         // Check if the teacher is authorized to edit this exam
         if ($exam->teacher_id != Auth::id()) {
             return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بتعديل هذا الاختبار');
+                ->with('error', 'غير مصرح لك بحذف هذا السؤال');
+        }
+        
+        // Check if the exam is published
+        if ($exam->is_published) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن حذف أسئلة من اختبار تم نشره بالفعل');
         }
         
         // Delete the question
@@ -291,8 +337,112 @@ class ExamController extends Controller
         $exam->total_marks = ExamQuestion::where('exam_id', $exam->id)->sum('marks');
         $exam->save();
         
-        return redirect()->route('teacher.exams.edit', $exam->id)
+        // Reorder remaining questions
+        $remainingQuestions = ExamQuestion::where('exam_id', $exam->id)
+            ->orderBy('order')
+            ->get();
+            
+        foreach ($remainingQuestions as $index => $q) {
+            $q->order = $index + 1;
+            $q->save();
+        }
+        
+        return redirect()->back()
             ->with('success', 'تم حذف السؤال بنجاح');
+    }
+    
+    /**
+     * Clear all questions from an exam.
+     *
+     * @param  int  $examId
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function clearQuestions($examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        // Check if the teacher is authorized to edit this exam
+        if ($exam->teacher_id != Auth::id()) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'غير مصرح لك بحذف أسئلة هذا الاختبار');
+        }
+        
+        // Check if the exam is published
+        if ($exam->is_published) {
+            return redirect()->back()
+                ->with('error', 'لا يمكن حذف أسئلة من اختبار تم نشره بالفعل');
+        }
+        
+        // Delete all questions
+        ExamQuestion::where('exam_id', $examId)->delete();
+        
+        // Reset total marks
+        $exam->total_marks = 0;
+        $exam->save();
+        
+        return redirect()->back()
+            ->with('success', 'تم حذف جميع الأسئلة بنجاح');
+    }
+    
+    /**
+     * Reorder questions within an exam.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $examId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reorderQuestions(Request $request, $examId)
+    {
+        $exam = Exam::findOrFail($examId);
+        
+        // Check if the teacher is authorized to edit this exam
+        if ($exam->teacher_id != Auth::id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'غير مصرح لك بتعديل هذا الاختبار'
+            ], 403);
+        }
+        
+        // Check if the exam is published
+        if ($exam->is_published) {
+            return response()->json([
+                'success' => false,
+                'message' => 'لا يمكن تعديل اختبار تم نشره بالفعل'
+            ], 403);
+        }
+        
+        $validator = Validator::make($request->all(), [
+            'questions' => 'required|array',
+            'questions.*' => 'required|integer|exists:exam_questions,id'
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'البيانات المرسلة غير صحيحة'
+            ], 400);
+        }
+        
+        // Update the order of each question
+        foreach ($request->questions as $index => $questionId) {
+            $question = ExamQuestion::findOrFail($questionId);
+            
+            // Make sure the question belongs to this exam
+            if ($question->exam_id != $examId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'تم اكتشاف سؤال لا ينتمي لهذا الاختبار'
+                ], 400);
+            }
+            
+            $question->order = $index + 1;
+            $question->save();
+        }
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'تم إعادة ترتيب الأسئلة بنجاح'
+        ]);
     }
 
     /**
@@ -322,7 +472,7 @@ class ExamController extends Controller
         $exam->save();
         
         return redirect()->route('teacher.exams.index')
-            ->with('success', 'تم نشر الاختبار بنجاح');
+            ->with('success', 'تم نشر الاختبار بنجاح. يمكنك الآن فتح الاختبار للطلاب.');
     }
 
     /**
@@ -347,8 +497,9 @@ class ExamController extends Controller
                 ->with('error', 'لا يمكن إلغاء نشر اختبار تم محاولته من قبل الطلاب');
         }
         
-        // Unpublish the exam
+        // Unpublish the exam and close it
         $exam->is_published = false;
+        $exam->is_open = false;
         $exam->save();
         
         return redirect()->route('teacher.exams.index')
@@ -369,16 +520,43 @@ class ExamController extends Controller
             return view('student.exams.index', ['exams' => collect()]);
         }
         
+        \Log::debug('Student Group ID: ' . $studentGroup);
+        
         // Get all exams available for the student's group
         $exams = Exam::where('group_id', $studentGroup)
             ->where('is_published', true)
             ->with(['course', 'group'])
-            ->orderBy('start_time', 'asc')
+            ->orderBy('created_at', 'asc')
             ->get();
         
-        // Update the status of each exam based on the current time
+        \Log::debug('Found ' . $exams->count() . ' exams for student');
+        
+        // تحديث الحالة لكل اختبار
         foreach ($exams as $exam) {
-            $exam->updateStatus();
+            \Log::debug('Processing Exam ID: ' . $exam->id . ', Title: ' . $exam->title);
+            
+            // تخزين الحالة قبل التحديث
+            $oldStatus = $exam->status;
+            
+            // تحديث الحالة بناءً على حالة النشر والفتح
+            if (!$exam->is_published) {
+                \Log::debug('  Exam is not published - setting status to pending');
+                $exam->status = 'pending';
+            } elseif ($exam->is_published && $exam->is_open) {
+                \Log::debug('  Exam is published and open - setting status to active');
+                $exam->status = 'active';
+            } else {
+                \Log::debug('  Exam is published but not open - setting status to completed');
+                $exam->status = 'completed';
+            }
+            
+            // حفظ الحالة المحدثة فقط إذا تغيرت
+            if ($oldStatus !== $exam->status) {
+                \Log::debug('  Status changed from ' . $oldStatus . ' to ' . $exam->status);
+                $exam->save();
+            } else {
+                \Log::debug('  Status unchanged: ' . $exam->status);
+            }
         }
         
         // Get the student's attempts for each exam
@@ -406,12 +584,18 @@ class ExamController extends Controller
                 ->with('error', 'غير مصرح لك بتقديم هذا الاختبار');
         }
         
-        // Check if the exam is published and active
-        if (!$exam->is_published || !$exam->isActive()) {
+        // Check if the exam is published and open
+        if (!$exam->is_published) {
             return redirect()->route('student.exams.index')
                 ->with('error', 'الاختبار غير متاح حالياً');
         }
         
+        // التحقق من أن الاختبار مفتوح للطلاب
+        if (!$exam->is_open) {
+            return redirect()->route('student.exams.index')
+                ->with('error', 'الاختبار غير متاح حالياً. يرجى الانتظار حتى يتم فتح الاختبار من قبل المدرس');
+        }
+
         // Check if the student has already attempted the exam
         $existingAttempt = StudentExamAttempt::where('student_id', $student->id)
             ->where('exam_id', $exam->id)
@@ -424,7 +608,14 @@ class ExamController extends Controller
                     ->with('error', 'لقد قمت بتقديم هذا الاختبار مسبقاً');
             }
             
-            // If the attempt is already started but not finished, continue it
+            // If there's an expired attempt but exam is still open, update it
+            if ($existingAttempt->timeRemaining() <= 0 && $exam->is_open) {
+                // Reset attempt to continue
+                $existingAttempt->status = 'in_progress';
+                $existingAttempt->save();
+            }
+            
+            // Continue the existing attempt
             return redirect()->route('student.exams.take', $exam->id);
         }
         
@@ -456,6 +647,12 @@ class ExamController extends Controller
                 ->with('error', 'غير مصرح لك بتقديم هذا الاختبار');
         }
         
+        // Check if the exam is published and open
+        if (!$exam->is_published || !$exam->is_open) {
+            return redirect()->route('student.exams.index')
+                ->with('error', 'الاختبار غير متاح حالياً');
+        }
+        
         // Get the student's attempt
         $attempt = StudentExamAttempt::where('student_id', $student->id)
             ->where('exam_id', $exam->id)
@@ -473,11 +670,22 @@ class ExamController extends Controller
             $attempt->save();
         }
         
-        // Check if the exam has ended or time has run out
-        if ($attempt->timeRemaining() <= 0 || $exam->hasEnded()) {
+        // Check if the exam has ended
+        if ($exam->hasEnded()) {
             $this->submitExam($id); // Auto-submit the exam
             return redirect()->route('student.exams.index')
                 ->with('warning', 'انتهى وقت الاختبار وتم تقديم إجاباتك تلقائياً');
+        }
+        
+        // Check only if the *exam duration* has run out from the student's attempt, 
+        // but the exam end time hasn't been reached
+        if ($attempt->timeRemaining() <= 0) {
+            // تم انتهاء وقت المحاولة، نقوم بتسليم الاختبار
+            $this->submitExam($id);
+            return redirect()->route('student.exams.index')
+                ->with('warning', 'انتهى وقت الاختبار وتم تقديم إجاباتك تلقائياً');
+        } else {
+            $timeRemaining = $attempt->timeRemaining();
         }
         
         // Get the student's answers for this exam
@@ -485,8 +693,10 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)
             ->pluck('answer', 'question_id')
             ->toArray();
-        
-        return view('student.exams.take', compact('exam', 'attempt', 'answers'));
+            
+        // مرر وقت الاختبار المتبقي إلى العرض
+        $questions = $exam->questions;
+        return view('student.exams.take', compact('exam', 'attempt', 'answers', 'questions', 'timeRemaining'));
     }
 
     /**
@@ -850,7 +1060,7 @@ class ExamController extends Controller
             ->withCount(['attempts as graded_count' => function($query) {
                 $query->where('status', 'graded');
             }])
-            ->orderBy('end_time', 'desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(15);
         
         // Calculate statistics for dashboard
@@ -1073,5 +1283,89 @@ class ExamController extends Controller
     public function grading(Request $request)
     {
         return $this->teacherGradingIndex($request);
+    }
+
+    /**
+     * Remove the specified exam from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function destroy($id)
+    {
+        $exam = Exam::findOrFail($id);
+        
+        // التحقق من أن المدرس هو صاحب الاختبار
+        if ($exam->teacher_id != Auth::id()) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'غير مصرح لك بحذف هذا الاختبار');
+        }
+        
+        // التحقق من عدم وجود محاولات للطلاب إذا كان الاختبار منشور
+        if ($exam->is_published && $exam->attempts()->count() > 0) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'لا يمكن حذف اختبار تم محاولته من قبل الطلاب');
+        }
+        
+        // حذف أسئلة الاختبار أولاً
+        $exam->questions()->delete();
+        
+        // حذف الاختبار
+        $exam->delete();
+        
+        return redirect()->route('teacher.exams.index')
+            ->with('success', 'تم حذف الاختبار بنجاح');
+    }
+
+    /**
+     * Open an exam for students.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function openExam($id)
+    {
+        $exam = Exam::findOrFail($id);
+        
+        // Check if the teacher is authorized
+        if ($exam->teacher_id != Auth::id()) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'غير مصرح لك بفتح هذا الاختبار');
+        }
+        
+        // Check if the exam is published
+        if (!$exam->is_published) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'يجب نشر الاختبار أولاً قبل فتحه للطلاب');
+        }
+        
+        // Open the exam
+        $exam->openExam();
+        
+        return redirect()->route('teacher.exams.index')
+            ->with('success', 'تم فتح الاختبار للطلاب بنجاح');
+    }
+    
+    /**
+     * Close an exam.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function closeExam($id)
+    {
+        $exam = Exam::findOrFail($id);
+        
+        // Check if the teacher is authorized
+        if ($exam->teacher_id != Auth::id()) {
+            return redirect()->route('teacher.exams.index')
+                ->with('error', 'غير مصرح لك بإغلاق هذا الاختبار');
+        }
+        
+        // Close the exam
+        $exam->closeExam();
+        
+        return redirect()->route('teacher.exams.index')
+            ->with('success', 'تم إغلاق الاختبار بنجاح');
     }
 }

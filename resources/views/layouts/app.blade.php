@@ -961,6 +961,13 @@
                     تقارير الاختبارات
                 </a>
             </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.7s">
+                <a class="nav-link {{ request()->routeIs('notifications*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
+                    <i class="fas fa-bell"></i>
+                    الإشعارات
+                </a>
+            </li>
             @endif
 
             @if(auth()->check() && auth()->user()->hasRole('Teacher'))
@@ -1007,6 +1014,13 @@
                     تصحيح الاختبارات
                 </a>
             </li>
+            
+            <li class="nav-item fade-in" style="animation-delay: 0.45s">
+                <a class="nav-link {{ request()->routeIs('notifications*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
+                    <i class="fas fa-bell"></i>
+                    الإشعارات
+                </a>
+            </li>
             @endif
             
             @if(auth()->check() && auth()->user()->hasRole('Student'))
@@ -1047,7 +1061,7 @@
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.45s">
-                <a class="nav-link {{ request()->routeIs('student.notifications*') ? 'active' : '' }}" href="{{ route('student.notifications') }}">
+                <a class="nav-link {{ request()->routeIs('notifications*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
                     <i class="fas fa-bell"></i>
                     الإشعارات
                 </a>

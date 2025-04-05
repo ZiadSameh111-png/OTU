@@ -8,6 +8,8 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TeacherAttendanceController;
 use App\Http\Controllers\GradeController;
+use App\Http\Controllers\ExamController;
+use App\Http\Controllers\AdminExamController;
 
 /*
 |--------------------------------------------------------------------------
@@ -60,6 +62,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/requests', [App\Http\Controllers\AdminRequestController::class, 'index'])->name('admin.requests');
         Route::get('/admin/requests/{request}', [App\Http\Controllers\AdminRequestController::class, 'show'])->name('admin.requests.show');
         Route::put('/admin/requests/{request}', [App\Http\Controllers\AdminRequestController::class, 'update'])->name('admin.requests.update');
+        Route::get('/admin/requests/{request}/response', [App\Http\Controllers\AdminRequestController::class, 'response'])->name('admin.requests.response');
         
         // Teacher attendance management routes
         Route::get('/admin/attendance', [App\Http\Controllers\TeacherAttendanceController::class, 'index'])->name('admin.attendance');
@@ -101,13 +104,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/students', [App\Http\Controllers\UserController::class, 'students'])->name('admin.students');
         Route::get('/admin/teachers', [App\Http\Controllers\UserController::class, 'teachers'])->name('admin.teachers');
         Route::get('/admin/groups', [App\Http\Controllers\GroupController::class, 'index'])->name('admin.groups');
-        Route::get('/admin/notifications', [App\Http\Controllers\NotificationController::class, 'adminIndex'])->name('admin.notifications');
         
         // Grades Reports Routes
         Route::get('/admin/grades/reports', [App\Http\Controllers\GradeController::class, 'adminReports'])->name('admin.grades.reports');
         Route::get('/admin/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'courseReport'])->name('admin.grades.course.report');
         Route::get('/admin/grades/group/{group}', [App\Http\Controllers\GradeController::class, 'groupReport'])->name('admin.grades.group.report');
         Route::get('/admin/grades/export/course/{course}/{format?}', [App\Http\Controllers\GradeController::class, 'exportCourseGrades'])->name('admin.grades.export.course');
+
+        // Exams Report Routes for Admin
+        Route::get('/admin/exams', [AdminExamController::class, 'index'])->name('admin.exams.index');
+        Route::get('/admin/exams/{id}', [AdminExamController::class, 'show'])->name('admin.exams.show');
+        Route::get('/admin/exams/reports', [AdminExamController::class, 'reports'])->name('admin.exams.reports');
+        Route::get('/admin/exams/reports/{id}', [AdminExamController::class, 'showReport'])->name('admin.exams.reports.show');
+        Route::get('/admin/exams/report/detail/{id}', [AdminExamController::class, 'reportDetail'])->name('admin.exams.report.detail');
+        Route::delete('/admin/exams/{id}', [AdminExamController::class, 'destroy'])->name('admin.exams.destroy');
     });
     
     // Schedule view routes - accessible by students
@@ -141,9 +151,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student/fees/retry/{transactionId}', [App\Http\Controllers\FeeController::class, 'retry'])->name('fees.retry');
 
         // Add after student schedules routes within the Student middleware group
-        Route::get('/student/notifications', [App\Http\Controllers\NotificationController::class, 'studentIndex'])->name('student.notifications');
         Route::get('/student/courses/{course}', [App\Http\Controllers\CourseController::class, 'studentShow'])->name('student.courses.show');
-        Route::post('/student/notifications/{id}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('student.notifications.mark-read');
         
         // Grades Routes
         Route::get('/student/grades', [App\Http\Controllers\GradeController::class, 'studentGrades'])->name('student.grades');
@@ -176,7 +184,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/teacher/schedule', [ScheduleController::class, 'teacherSchedule'])->name('teacher.schedule');
         Route::get('/teacher/schedule/{schedule}', [ScheduleController::class, 'teacherShow'])->name('teacher.schedule.show');
         Route::get('/teacher/groups', [App\Http\Controllers\GroupController::class, 'teacherGroups'])->name('teacher.groups');
-        Route::get('/teacher/notifications', [App\Http\Controllers\NotificationController::class, 'teacherIndex'])->name('teacher.notifications');
         Route::get('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'index'])->name('teacher.attendance');
         Route::get('/teacher/attendance/create', [App\Http\Controllers\StudentAttendanceController::class, 'create'])->name('teacher.attendance.create');
         Route::post('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'store'])->name('teacher.attendance.store');
@@ -189,15 +196,40 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/teacher/grades/course/{course}/submit', [App\Http\Controllers\GradeController::class, 'submitFinal'])->name('teacher.grades.submit.final');
 
         // Teacher Exam Routes
-        Route::get('/teacher/exams', [App\Http\Controllers\ExamController::class, 'teacherIndex'])->name('teacher.exams.index');
-        Route::get('/teacher/exams/create', [App\Http\Controllers\ExamController::class, 'create'])->name('teacher.exams.create');
-        Route::post('/teacher/exams', [App\Http\Controllers\ExamController::class, 'store'])->name('teacher.exams.store');
-        Route::get('/teacher/exams/{exam}/edit', [App\Http\Controllers\ExamController::class, 'edit'])->name('teacher.exams.edit');
-        Route::put('/teacher/exams/{exam}', [App\Http\Controllers\ExamController::class, 'update'])->name('teacher.exams.update');
-        Route::delete('/teacher/exams/{exam}', [App\Http\Controllers\ExamController::class, 'destroy'])->name('teacher.exams.destroy');
-        Route::put('/teacher/exams/{exam}/publish', [App\Http\Controllers\ExamController::class, 'publish'])->name('teacher.exams.publish');
-        Route::put('/teacher/exams/{exam}/unpublish', [App\Http\Controllers\ExamController::class, 'unpublish'])->name('teacher.exams.unpublish');
+        Route::prefix('teacher/exams')->name('teacher.exams.')->middleware(['auth', 'role:Teacher'])->group(function () {
+            Route::get('/', [ExamController::class, 'teacherIndex'])->name('index');
+            Route::get('/create', [ExamController::class, 'create'])->name('create');
+            Route::post('/', [ExamController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [ExamController::class, 'edit'])->name('edit');
+            Route::put('/{id}/publish', [ExamController::class, 'publish'])->name('publish');
+            Route::put('/{id}/unpublish', [ExamController::class, 'unpublish'])->name('unpublish');
+            Route::put('/{id}/open', [ExamController::class, 'openExam'])->name('open');
+            Route::put('/{id}/close', [ExamController::class, 'closeExam'])->name('close');
+            
+            // إضافة باقي المسارات
+            Route::delete('/{id}', [ExamController::class, 'destroy'])->name('destroy');
+            Route::post('/{id}/questions', [ExamController::class, 'addQuestion'])->name('questions.store');
+            Route::get('/questions/{id}', [ExamController::class, 'getQuestionData'])->name('questions.get');
+            Route::put('/questions/{id}', [ExamController::class, 'updateQuestion'])->name('questions.update');
+            Route::delete('/questions/{id}', [ExamController::class, 'removeQuestion'])->name('questions.destroy');
+            Route::delete('/{id}/questions', [ExamController::class, 'clearQuestions'])->name('questions.clear');
+            Route::put('/{id}/questions/reorder', [ExamController::class, 'reorderQuestions'])->name('questions.reorder');
+            
+            // مسارات التصحيح
+            Route::get('/grading', [ExamController::class, 'teacherGradingIndex'])->name('grading');
+            Route::get('/grading/{id}', [ExamController::class, 'teacherGradingShow'])->name('grading.show');
+            Route::get('/grading/{examId}/student/{studentId}', [ExamController::class, 'gradeOpenEndedQuestions'])->name('grading.open-ended');
+            Route::post('/grading/{examId}/student/{studentId}', [ExamController::class, 'saveOpenEndedGrades'])->name('grading.save');
+        });
+
+        // Exam Questions Management Routes
         Route::post('/teacher/exams/{exam}/questions', [App\Http\Controllers\ExamController::class, 'addQuestion'])->name('teacher.exams.questions.add');
+        Route::get('/teacher/exams/questions/{id}/edit', [App\Http\Controllers\ExamController::class, 'getQuestionData'])->name('teacher.exams.questions.edit');
+        Route::put('/teacher/exams/questions/{id}', [App\Http\Controllers\ExamController::class, 'updateQuestion'])->name('teacher.exams.update-question');
+        Route::delete('/teacher/exams/questions/{id}', [App\Http\Controllers\ExamController::class, 'removeQuestion'])->name('teacher.exams.remove-question');
+        Route::delete('/teacher/exams/{exam}/clear-questions', [App\Http\Controllers\ExamController::class, 'clearQuestions'])->name('teacher.exams.clear-questions');
+        Route::post('/teacher/exams/{exam}/reorder-questions', [App\Http\Controllers\ExamController::class, 'reorderQuestions'])->name('teacher.exams.reorder-questions');
+        
         Route::get('/teacher/exams/grading', [App\Http\Controllers\ExamController::class, 'grading'])->name('teacher.exams.grading');
     });
 
@@ -219,6 +251,14 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/grades', [GradeController::class, 'adminIndex'])->name('admin.grades.index');
         Route::get('/admin/grades/course/{course}', [GradeController::class, 'adminViewCourse'])->name('admin.grades.view');
     });
+
+    // Notification routes - accessible by all authenticated users
+    Route::get('/notifications', [App\Http\Controllers\NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/create', [App\Http\Controllers\NotificationController::class, 'create'])->name('notifications.create');
+    Route::post('/notifications', [App\Http\Controllers\NotificationController::class, 'store'])->name('notifications.store');
+    Route::get('/notifications/{notification}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
+    Route::get('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
+    Route::delete('/notifications/{notification}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
 });
 
 // Student Admin Requests Routes

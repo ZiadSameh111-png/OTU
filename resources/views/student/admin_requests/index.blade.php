@@ -164,9 +164,9 @@
                                             </td>
                                             <td>{{ $request->updated_at->diffForHumans() }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#viewModal{{ $request->id }}">
+                                                <a href="{{ route('student.requests.show', $request->id) }}" class="btn btn-sm btn-outline-primary">
                                                     <i class="fas fa-eye"></i>
-                                                </button>
+                                                </a>
                                                 
                                                 @if($request->status == 'pending')
                                                     <form action="{{ route('student.admin-requests.destroy', $request->id) }}" method="POST" class="d-inline">

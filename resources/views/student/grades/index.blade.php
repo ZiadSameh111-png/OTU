@@ -13,7 +13,7 @@
                         <div class="alert alert-success">{{ session('success') }}</div>
                     @endif
 
-                    <div class="row mb-4">
+    <div class="row mb-4">
                         <div class="col-md-12">
                             <div class="filters">
                                 <form action="{{ route('student.grades.index') }}" method="GET" class="form-inline justify-content-end">
@@ -27,16 +27,16 @@
                                     </div>
                                 </form>
                             </div>
-                        </div>
-                    </div>
+        </div>
+    </div>
 
                     @if($grades->isEmpty())
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle ml-1"></i>
                             لا توجد درجات لعرضها حاليًا.
-                        </div>
+        </div>
                     @else
-                        <div class="table-responsive">
+                <div class="table-responsive">
                             <table class="table table-bordered table-hover">
                                 <thead class="thead-light">
                                     <tr>
@@ -47,9 +47,9 @@
                                         <th>التقدير</th>
                                         <th>الحالة</th>
                                         <th>التفاصيل</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
+                            </tr>
+                        </thead>
+                        <tbody>
                                     @foreach($grades as $grade)
                                         @php
                                             // Calculate total grades
@@ -74,9 +74,9 @@
                                                 } elseif ($letterGrade == 'F') {
                                                     $badgeClass = 'badge-danger';
                                                 }
-                                            }
-                                        @endphp
-                                        <tr>
+                                    }
+                                @endphp
+                                <tr>
                                             <td>{{ $grade->course->name }}</td>
                                             <td>{{ $grade->course->code }}</td>
                                             <td>{{ $grade->course->teacher ? $grade->course->teacher->name : 'غير محدد' }}</td>
@@ -94,41 +94,41 @@
                                                         </div>
                                                         <span>{{ $totalGrade }}/{{ $totalPossible }}</span>
                                                     </div>
-                                                @else
+                                        @else
                                                     <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td>
+                                        @endif
+                                    </td>
+                                    <td>
                                                 @if($grade->submitted)
                                                     <span class="badge {{ $badgeClass }}">{{ $letterGrade }}</span>
-                                                @else
+                                        @else
                                                     <span class="text-muted">-</span>
-                                                @endif
-                                            </td>
-                                            <td>
+                                        @endif
+                                    </td>
+                                    <td>
                                                 @if($grade->submitted)
                                                     <span class="badge badge-success">تم تقديم الدرجات</span>
-                                                @else
+                                        @else
                                                     <span class="badge badge-warning">لم يتم التقديم بعد</span>
-                                                @endif
-                                            </td>
-                                            <td>
+                                        @endif
+                                    </td>
+                                    <td>
                                                 <a href="{{ route('student.grades.details', $grade->course->id) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-eye ml-1"></i> التفاصيل
                                                 </a>
-                                            </td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
                         
                         <div class="row mt-4">
                             <div class="col-md-6">
                                 <div class="card shadow-sm">
                                     <div class="card-header bg-light">
                                         <h5 class="mb-0">الإحصائيات</h5>
-                                    </div>
+            </div>
                                     <div class="card-body">
                                         @php
                                             $submittedCount = $grades->where('submitted', true)->count();
@@ -168,23 +168,23 @@
                                             
                                             $successRate = $submittedCount > 0 ? round(($passedCount / $submittedCount) * 100) : 0;
                                             $gpa = $totalCreditHours > 0 ? round($totalGradePoints / $totalCreditHours, 2) : 0;
-                                        @endphp
+                                @endphp
                                         
                                         <p><strong>إجمالي المقررات:</strong> {{ $totalCount }}</p>
                                         <p><strong>المقررات المكتملة:</strong> {{ $submittedCount }} ({{ $totalCount > 0 ? round(($submittedCount / $totalCount) * 100) : 0 }}%)</p>
                                         <p><strong>المقررات المتبقية:</strong> {{ $pendingCount }}</p>
                                         <p><strong>نسبة النجاح:</strong> {{ $successRate }}%</p>
                                         <p><strong>المعدل التراكمي التقريبي:</strong> {{ $gpa }} من 4.0</p>
-                                    </div>
-                                </div>
                             </div>
+                        </div>
+                    </div>
                             
                             <div class="col-md-6">
                                 <div class="card shadow-sm">
                                     <div class="card-header bg-light">
                                         <h5 class="mb-0">تفسير التقديرات</h5>
                                     </div>
-                                    <div class="card-body">
+                            <div class="card-body">
                                         <div class="row">
                                             <div class="col-md-6">
                                                 <ul class="list-unstyled">
@@ -203,15 +203,15 @@
                                                     <li><span class="badge badge-danger">F</span> - راسب (أقل من 60%)</li>
                                                 </ul>
                                             </div>
-                                        </div>
-                                    </div>
+                                </div>
+                                </div>
                                 </div>
                             </div>
                         </div>
                     @endif
                 </div>
+                </div>
             </div>
         </div>
-    </div>
 </div>
 @endsection 

@@ -84,9 +84,9 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#responseModal{{ $request->id }}">
+                                                <a href="{{ route('admin.requests.response', $request->id) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-reply me-1"></i> الرد
-                                                </button>
+                                                </a>
                                             </td>
                                         </tr>
 
@@ -104,40 +104,6 @@
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
                                                     </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Modal for Responding to Request -->
-                                        <div class="modal fade" id="responseModal{{ $request->id }}" tabindex="-1" aria-labelledby="responseModalLabel{{ $request->id }}" aria-hidden="true">
-                                            <div class="modal-dialog">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title" id="responseModalLabel{{ $request->id }}">الرد على الطلب</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                    </div>
-                                                    <form action="{{ route('admin.requests.update', $request) }}" method="POST">
-                                                        @csrf
-                                                        @method('PUT')
-                                                        <div class="modal-body">
-                                                            <div class="mb-3">
-                                                                <label for="status" class="form-label">الحالة</label>
-                                                                <select class="form-select" id="status" name="status" required>
-                                                                    <option value="pending" {{ $request->status == 'pending' ? 'selected' : '' }}>قيد المعالجة</option>
-                                                                    <option value="approved" {{ $request->status == 'approved' ? 'selected' : '' }}>مقبول</option>
-                                                                    <option value="rejected" {{ $request->status == 'rejected' ? 'selected' : '' }}>مرفوض</option>
-                                                                </select>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label for="admin_comment" class="form-label">الرد</label>
-                                                                <textarea class="form-control" id="admin_comment" name="admin_comment" rows="3" placeholder="أدخل ردك على الطلب هنا...">{{ $request->admin_comment }}</textarea>
-                                                            </div>
-                                                        </div>
-                                                        <div class="modal-footer">
-                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                                                            <button type="submit" class="btn btn-primary">تحديث الحالة</button>
-                                                        </div>
-                                                    </form>
                                                 </div>
                                             </div>
                                         </div>

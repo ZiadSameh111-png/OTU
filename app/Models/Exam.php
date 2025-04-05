@@ -20,13 +20,12 @@ class Exam extends Model
         'course_id',
         'group_id',
         'teacher_id',
-        'start_time',
-        'end_time',
         'duration',
         'status',
         'question_type',
         'total_marks',
         'is_published',
+        'is_open',
     ];
 
     /**
@@ -35,9 +34,8 @@ class Exam extends Model
      * @var array
      */
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time' => 'datetime',
         'is_published' => 'boolean',
+        'is_open' => 'boolean',
     ];
 
     /**
@@ -89,16 +87,14 @@ class Exam extends Model
     }
 
     /**
-     * Check if exam is active based on current time.
+     * Check if exam is active based on manual control.
      *
      * @return bool
      */
     public function isActive()
     {
-        $now = Carbon::now();
-        return $this->is_published && 
-               $now->greaterThanOrEqualTo($this->start_time) && 
-               $now->lessThanOrEqualTo($this->end_time);
+        // الاختبار نشط إذا كان منشور ومفتوح
+        return $this->is_published && $this->is_open;
     }
 
     /**
@@ -108,7 +104,8 @@ class Exam extends Model
      */
     public function hasEnded()
     {
-        return Carbon::now()->greaterThan($this->end_time);
+        // الاختبار منته إذا كان منشور وغير مفتوح
+        return $this->is_published && !$this->is_open;
     }
 
     /**
@@ -118,7 +115,8 @@ class Exam extends Model
      */
     public function notStartedYet()
     {
-        return Carbon::now()->lessThan($this->start_time);
+        // الاختبار لم يبدأ بعد إذا كان منشور وغير مفتوح (غير نشط)
+        return $this->is_published && !$this->is_open;
     }
 
     /**
@@ -152,35 +150,62 @@ class Exam extends Model
     }
 
     /**
-     * Calculate time remaining for the exam (in minutes).
+     * Get the duration of the exam (in minutes).
      *
      * @return int
      */
     public function timeRemaining()
     {
-        if ($this->hasEnded()) {
-            return 0;
-        }
-        
-        $now = Carbon::now();
-        return $now->diffInMinutes($this->end_time, false);
+        // في النظام الجديد نعتمد فقط على مدة الاختبار
+        return $this->duration;
     }
 
     /**
-     * Update the status of the exam based on current time.
+     * Update the status of the exam based on is_open.
      *
      * @return void
      */
     public function updateStatus()
     {
-        if ($this->notStartedYet()) {
+        $oldStatus = $this->status;
+        
+        // تحديد الحالة بناءً على حالة النشر والفتح
+        if (!$this->is_published) {
             $this->status = 'pending';
-        } elseif ($this->isActive()) {
+        } elseif ($this->is_published && $this->is_open) {
             $this->status = 'active';
-        } elseif ($this->hasEnded()) {
+        } elseif ($this->is_published && !$this->is_open) {
             $this->status = 'completed';
         }
         
+        // حفظ الحالة الجديدة فقط إذا تغيرت
+        if ($oldStatus !== $this->status) {
+            \Log::debug('Status changed from ' . $oldStatus . ' to ' . $this->status);
+            $this->save();
+        }
+    }
+
+    /**
+     * Open the exam manually.
+     *
+     * @return void
+     */
+    public function openExam()
+    {
+        $this->is_open = true;
+        $this->status = 'active';
+        $this->save();
+    }
+
+    /**
+     * Close the exam manually.
+     *
+     * @return void
+     */
+    public function closeExam()
+    {
+        $this->is_open = false;
+        $this->status = 'completed';
         $this->save();
     }
 }

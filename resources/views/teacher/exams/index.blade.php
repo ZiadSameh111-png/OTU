@@ -33,8 +33,6 @@
                                         <th>عنوان الاختبار</th>
                                         <th>المقرر</th>
                                         <th>المجموعة</th>
-                                        <th>تاريخ البدء</th>
-                                        <th>تاريخ الانتهاء</th>
                                         <th>المدة (دقيقة)</th>
                                         <th>الحالة</th>
                                         <th>عدد الأسئلة</th>
@@ -47,8 +45,6 @@
                                             <td>{{ $exam->title }}</td>
                                             <td>{{ $exam->course->name }}</td>
                                             <td>{{ $exam->group->name }}</td>
-                                            <td>{{ $exam->start_time->format('Y-m-d h:i A') }}</td>
-                                            <td>{{ $exam->end_time->format('Y-m-d h:i A') }}</td>
                                             <td>{{ $exam->duration }}</td>
                                             <td>
                                                 @if($exam->status === 'pending')
@@ -72,23 +68,49 @@
                                                         <i class="fas fa-edit"></i> تعديل
                                                     </a>
                                                     
-                                                    @if(!$exam->is_published)
-                                                        <form action="{{ route('teacher.exams.publish', $exam->id) }}" method="POST" class="d-inline">
-                                                            @csrf
-                                                            @method('PUT')
-                                                            <button type="submit" class="btn btn-sm btn-success mr-1" {{ $exam->questions->count() == 0 ? 'disabled' : '' }}>
-                                                                <i class="fas fa-globe"></i> نشر
-                                                            </button>
-                                                        </form>
-                                                    @else
+                                                    @if($exam->is_published)
                                                         <form action="{{ route('teacher.exams.unpublish', $exam->id) }}" method="POST" class="d-inline">
                                                             @csrf
                                                             @method('PUT')
-                                                            <button type="submit" class="btn btn-sm btn-warning mr-1" {{ $exam->attempts()->count() > 0 ? 'disabled' : '' }}>
-                                                                <i class="fas fa-eye-slash"></i> إلغاء النشر
+                                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من إلغاء نشر هذا الاختبار؟')">
+                                                                <i class="fas fa-ban"></i> إلغاء النشر
+                                                            </button>
+                                                        </form>
+                                                        
+                                                        @if($exam->is_open)
+                                                            <form action="{{ route('teacher.exams.close', $exam->id) }}" method="POST" class="d-inline">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('هل أنت متأكد من إغلاق هذا الاختبار؟')">
+                                                                    <i class="fas fa-lock"></i> إغلاق الاختبار
+                                                                </button>
+                                                            </form>
+                                                        @else
+                                                            <form action="{{ route('teacher.exams.open', $exam->id) }}" method="POST" class="d-inline">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                                    <i class="fas fa-unlock"></i> فتح الاختبار
+                                                                </button>
+                                                            </form>
+                                                        @endif
+                                                    @else
+                                                        <form action="{{ route('teacher.exams.publish', $exam->id) }}" method="POST" class="d-inline">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <button type="submit" class="btn btn-sm btn-success">
+                                                                <i class="fas fa-check"></i> نشر
                                                             </button>
                                                         </form>
                                                     @endif
+                                                    
+                                                    <form action="{{ route('teacher.exams.destroy', $exam->id) }}" method="POST" class="d-inline">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('هل أنت متأكد من حذف هذا الاختبار نهائياً؟ لا يمكن التراجع عن هذه العملية!')">
+                                                            <i class="fas fa-trash"></i> حذف
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             </td>
                                         </tr>

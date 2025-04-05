@@ -63,17 +63,6 @@
                         
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label for="start_time" class="form-label">تاريخ ووقت البداية <span class="text-danger">*</span></label>
-                                <input type="datetime-local" class="form-control" id="start_time" name="start_time" value="{{ old('start_time') }}" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="end_time" class="form-label">تاريخ ووقت النهاية <span class="text-danger">*</span></label>
-                                <input type="datetime-local" class="form-control" id="end_time" name="end_time" value="{{ old('end_time') }}" required>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-6">
                                 <label for="duration" class="form-label">مدة الاختبار (بالدقائق) <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="duration" name="duration" min="1" max="240" value="{{ old('duration', 60) }}" required>
                                 <div class="form-text">مدة الاختبار بالدقائق (من 1 إلى 240 دقيقة)</div>
@@ -111,10 +100,9 @@
                     <ul class="mb-0">
                         <li class="mb-2">قم بإدخال عنوان وصفي للاختبار.</li>
                         <li class="mb-2">حدد المقرر الدراسي والمجموعة المستهدفة.</li>
-                        <li class="mb-2">حدد تاريخ ووقت بداية ونهاية الاختبار (الفترة التي سيكون فيها الاختبار متاحاً).</li>
                         <li class="mb-2">حدد المدة الزمنية للاختبار بالدقائق.</li>
                         <li class="mb-2">اختر نوع الأسئلة التي ستستخدمها في الاختبار.</li>
-                        <li>بعد إنشاء الاختبار، ستتمكن من إضافة الأسئلة.</li>
+                        <li>بعد إنشاء الاختبار، ستتمكن من إضافة الأسئلة وفتح الاختبار للطلاب.</li>
                     </ul>
                 </div>
             </div>

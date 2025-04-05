@@ -392,7 +392,7 @@
                             @endforeach
                         </ul>
                         <div class="p-3">
-                            <a href="{{ route('admin.notifications') }}" class="btn btn-outline-primary btn-sm w-100">
+                            <a href="{{ route('notifications.index') }}" class="btn btn-outline-primary btn-sm w-100">
                                 <i class="fas fa-external-link-alt me-1"></i> عرض جميع الإشعارات
                             </a>
                         </div>

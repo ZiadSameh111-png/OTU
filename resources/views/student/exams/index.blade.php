@@ -40,8 +40,6 @@
                                             <th>عنوان الاختبار</th>
                                             <th>المقرر</th>
                                             <th>المجموعة</th>
-                                            <th>تاريخ البدء</th>
-                                            <th>تاريخ الانتهاء</th>
                                             <th>المدة (دقيقة)</th>
                                             <th>الحالة</th>
                                             <th>الإجراءات</th>
@@ -56,8 +54,6 @@
                                                     <td>{{ $exam->title }}</td>
                                                     <td>{{ $exam->course->name }}</td>
                                                     <td>{{ $exam->group->name }}</td>
-                                                    <td>{{ $exam->start_time->format('Y-m-d h:i A') }}</td>
-                                                    <td>{{ $exam->end_time->format('Y-m-d h:i A') }}</td>
                                                     <td>{{ $exam->duration }}</td>
                                                     <td>
                                                         <span class="badge badge-success">متاح الآن</span>
@@ -82,7 +78,7 @@
                                         @endforeach
                                         @if(!$activeExamFound)
                                             <tr>
-                                                <td colspan="8" class="text-center text-muted">لا توجد اختبارات متاحة حالياً</td>
+                                                <td colspan="6" class="text-center text-muted">لا توجد اختبارات متاحة حالياً</td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -102,10 +98,8 @@
                                             <th>عنوان الاختبار</th>
                                             <th>المقرر</th>
                                             <th>المجموعة</th>
-                                            <th>تاريخ البدء</th>
-                                            <th>تاريخ الانتهاء</th>
                                             <th>المدة (دقيقة)</th>
-                                            <th>الوقت المتبقي</th>
+                                            <th>الحالة</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -117,20 +111,16 @@
                                                     <td>{{ $exam->title }}</td>
                                                     <td>{{ $exam->course->name }}</td>
                                                     <td>{{ $exam->group->name }}</td>
-                                                    <td>{{ $exam->start_time->format('Y-m-d h:i A') }}</td>
-                                                    <td>{{ $exam->end_time->format('Y-m-d h:i A') }}</td>
                                                     <td>{{ $exam->duration }}</td>
                                                     <td>
-                                                        <span class="badge badge-info">
-                                                            {{ now()->diffInDays($exam->start_time) > 0 ? now()->diffInDays($exam->start_time) . ' يوم' : now()->diffInHours($exam->start_time) . ' ساعة' }}
-                                                        </span>
+                                                        <span class="badge badge-info">قادم</span>
                                                     </td>
                                                 </tr>
                                             @endif
                                         @endforeach
                                         @if(!$upcomingExamFound)
                                             <tr>
-                                                <td colspan="7" class="text-center text-muted">لا توجد اختبارات قادمة</td>
+                                                <td colspan="5" class="text-center text-muted">لا توجد اختبارات قادمة</td>
                                             </tr>
                                         @endif
                                     </tbody>
@@ -150,8 +140,6 @@
                                             <th>عنوان الاختبار</th>
                                             <th>المقرر</th>
                                             <th>المجموعة</th>
-                                            <th>تاريخ البدء</th>
-                                            <th>تاريخ الانتهاء</th>
                                             <th>الحالة</th>
                                             <th>الإجراءات</th>
                                         </tr>
@@ -165,8 +153,6 @@
                                                     <td>{{ $exam->title }}</td>
                                                     <td>{{ $exam->course->name }}</td>
                                                     <td>{{ $exam->group->name }}</td>
-                                                    <td>{{ $exam->start_time->format('Y-m-d h:i A') }}</td>
-                                                    <td>{{ $exam->end_time->format('Y-m-d h:i A') }}</td>
                                                     <td>
                                                         @if(isset($attempts[$exam->id]) && in_array($attempts[$exam->id], ['submitted', 'graded']))
                                                             <span class="badge badge-success">تم التقديم</span>
@@ -190,7 +176,7 @@
                                         @endforeach
                                         @if(!$completedExamFound)
                                             <tr>
-                                                <td colspan="7" class="text-center text-muted">لا توجد اختبارات منتهية</td>
+                                                <td colspan="5" class="text-center text-muted">لا توجد اختبارات منتهية</td>
                                             </tr>
                                         @endif
                                     </tbody>

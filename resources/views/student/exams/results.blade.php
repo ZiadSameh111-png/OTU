@@ -61,8 +61,14 @@
                             <p><strong>تاريخ التقديم:</strong> {{ $attempt->submit_time ? $attempt->submit_time->format('Y-m-d h:i A') : 'غير محدد' }}</p>
                         </div>
                         <div class="col-md-6">
-                            <p><strong>بداية الاختبار:</strong> {{ $exam->start_time->format('Y-m-d h:i A') }}</p>
-                            <p><strong>نهاية الاختبار:</strong> {{ $exam->end_time->format('Y-m-d h:i A') }}</p>
+                            <p><strong>حالة الاختبار:</strong> 
+                                @if($exam->is_open)
+                                    <span class="badge badge-success">مفتوح</span>
+                                @else
+                                    <span class="badge badge-secondary">مغلق</span>
+                                @endif
+                            </p>
+                            <p><strong>مدة الاختبار:</strong> {{ $exam->duration }} دقيقة</p>
                             <p><strong>المدة المستغرقة:</strong> {{ $attempt->duration() }} دقيقة</p>
                         </div>
                     </div>

@@ -117,7 +117,7 @@ class AdminRequestController extends Controller
         $adminRequest->admin_id = auth()->id();
         $adminRequest->save();
         
-        return redirect()->route('admin.requests.index')
+        return redirect()->route('admin.requests')
                          ->with('success', 'تم تحديث حالة الطلب بنجاح');
     }
 
@@ -163,6 +163,25 @@ class AdminRequestController extends Controller
     }
 
     /**
+     * Display the specified admin request for a student.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function studentShow($id)
+    {
+        $adminRequest = AdminRequest::findOrFail($id);
+        
+        // Check if the user owns this request
+        if (auth()->id() !== $adminRequest->user_id) {
+            return redirect()->route('student.requests')
+                ->with('error', 'لا يمكنك الوصول إلى هذا الطلب');
+        }
+        
+        return view('student.admin_requests.show', compact('adminRequest'));
+    }
+
+    /**
      * Download the certificate for a completed request.
      *
      * @param  int  $id
@@ -193,5 +212,17 @@ class AdminRequestController extends Controller
         ]);
         
         return $pdf->download('certificate_' . $id . '.pdf');
+    }
+
+    /**
+     * Show the form for responding to an admin request.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function response($id)
+    {
+        $request = AdminRequest::with('student')->findOrFail($id);
+        return view('admin.requests.responses.edit', compact('request'));
     }
 }

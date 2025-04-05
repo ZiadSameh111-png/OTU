@@ -19,8 +19,8 @@
                     
                     <div class="card bg-light mb-4">
                         <div class="card-body">
-                            <h5 class="card-title">وصف المقرر</h5>
-                            <p class="card-text">{{ $course->description ?: 'لا يوجد وصف متاح.' }}</p>
+                            <h5 class="card-title text-dark fw-bold">وصف المقرر</h5>
+                            <p class="card-text text-dark fw-bold">{{ $course->description ?: 'لا يوجد وصف متاح.' }}</p>
                         </div>
                     </div>
                 </div>
@@ -32,13 +32,18 @@
                         </div>
                         <div class="card-body">
                             <div class="mb-3">
-                                <strong><i class="fas fa-user text-primary me-2"></i> المدرس:</strong>
-                                <p class="mt-1">{{ $course->teacher ? $course->teacher->name : 'غير معين' }}</p>
+                                <strong class="text-dark fw-bold"><i class="fas fa-user text-primary me-2"></i> المدرس:</strong>
+                                <p class="mt-1 text-dark fw-bold">{{ $course->teacher ? $course->teacher->name : 'غير معين' }}</p>
                             </div>
                             
                             <div class="mb-3">
-                                <strong><i class="fas fa-users text-primary me-2"></i> المجموعة:</strong>
+                                <strong class="text-dark fw-bold"><i class="fas fa-users text-primary me-2"></i> المجموعة:</strong>
                                 <p class="mt-1">{{ $group ? $group->name : 'غير مسجل في مجموعة' }}</p>
+                            </div>
+
+                            <div class="mb-3">
+                                <strong class="text-dark fw-bold"><i class="fas fa-calendar-plus text-primary me-2"></i> تاريخ الإضافة:</strong>
+                                <p class="mt-1 text-dark fw-bold">{{ $course->created_at ? $course->created_at->format('Y-m-d') : 'غير متاح' }}</p>
                             </div>
                         </div>
                     </div>
