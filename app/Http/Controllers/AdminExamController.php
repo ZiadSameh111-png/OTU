@@ -33,4 +33,22 @@ class AdminExamController extends Controller
         
         return redirect()->back()->with('success', 'تم حذف الاختبار بنجاح.');
     }
+
+    /**
+     * عرض تفاصيل الاختبار للمشرف
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $exam = Exam::with(['course', 'group', 'teacher', 'questions'])
+            ->withCount(['attempts as total_attempts'])
+            ->withCount(['attempts as submitted_count' => function($query) {
+                $query->whereIn('status', ['submitted', 'graded']);
+            }])
+            ->findOrFail($id);
+        
+        return view('admin.exams.show', compact('exam'));
+    }
 } 
