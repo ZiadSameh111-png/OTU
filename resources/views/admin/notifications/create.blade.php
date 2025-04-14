@@ -170,6 +170,17 @@
         
         // Update on change
         receiverTypeSelect.addEventListener('change', updateReceiverOptions);
+        
+        // Log form submission for debugging
+        const notificationForm = document.querySelector('form[action="{{ route('notifications.store') }}"]');
+        if (notificationForm) {
+            console.log('Notification form found');
+            notificationForm.addEventListener('submit', function() {
+                console.log('Form submitted');
+            });
+        } else {
+            console.error('Notification form not found!');
+        }
     });
 </script>
 @endpush

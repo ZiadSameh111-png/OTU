@@ -23,6 +23,9 @@ class Notification extends Model
         'receiver_type',
         'read_at',
         'group_id',
+        'role',
+        'notification_type',
+        'url',
     ];
 
     /**
@@ -101,8 +104,7 @@ class Notification extends Model
      */
     public function scopeForUser($query, $userId)
     {
-        return $query->where('receiver_id', $userId)
-                     ->where('receiver_type', 'user');
+        return $query->where('receiver_id', $userId);
     }
 
     /**

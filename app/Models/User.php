@@ -155,4 +155,20 @@ class User extends Authenticatable
             ->where('is_published', true)
             ->get();
     }
+
+    /**
+     * Get all notifications for this user.
+     */
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'receiver_id');
+    }
+
+    /**
+     * Get unread notifications for this user.
+     */
+    public function unreadNotifications()
+    {
+        return $this->notifications()->whereNull('read_at');
+    }
 }

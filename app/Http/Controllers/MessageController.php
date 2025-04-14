@@ -234,6 +234,47 @@ class MessageController extends Controller
     }
 
     /**
+     * Create notification for a new message
+     */
+    private function createMessageNotification($message)
+    {
+        try {
+            // Get the receiver's role to determine the right route
+            $receiver = \App\Models\User::find($message->receiver_id);
+            if (!$receiver) {
+                \Log::error('Receiver not found for message notification: ' . $message->id);
+                return;
+            }
+            
+            // Determine the appropriate route based on receiver's role
+            $url = null;
+            $role = strtolower($receiver->role);
+            if ($role === 'student') {
+                $url = route('student.messages.show', $message->id);
+            } elseif ($role === 'teacher') {
+                $url = route('teacher.messages.show', $message->id);
+            } elseif ($role === 'admin') {
+                $url = route('admin.messages.show', $message->id);
+            }
+            
+            // Create a notification for the receiver
+            \App\Models\Notification::create([
+                'title' => 'رسالة جديدة',
+                'description' => 'لقد تلقيت رسالة جديدة: ' . $message->subject,
+                'sender_id' => $message->sender_id,
+                'receiver_id' => $message->receiver_id,
+                'receiver_type' => 'user',
+                'notification_type' => 'general',
+                'url' => $url,
+            ]);
+            
+            \Log::info('Message notification created for message ID: ' . $message->id);
+        } catch (\Exception $e) {
+            \Log::error('Error creating message notification: ' . $e->getMessage());
+        }
+    }
+
+    /**
      * حفظ رسالة جديدة من المسؤول
      */
     public function adminStore(Request $request)
@@ -261,6 +302,9 @@ class MessageController extends Controller
             $message->is_read = false;
             $message->save();
             
+            // Create notification for the receiver
+            $this->createMessageNotification($message);
+            
             return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
             
         } elseif ($request->recipient_type == 'teacher') {
@@ -276,6 +320,9 @@ class MessageController extends Controller
             $message->receiver_type = 'teacher';
             $message->is_read = false;
             $message->save();
+            
+            // Create notification for the receiver
+            $this->createMessageNotification($message);
             
             return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
             
@@ -300,6 +347,10 @@ class MessageController extends Controller
                 $message->role = 'all';
                 $message->is_read = false;
                 $message->save();
+                
+                // Create notification for the receiver
+                $this->createMessageNotification($message);
+                
                 $count++;
             }
             
@@ -326,6 +377,10 @@ class MessageController extends Controller
                 $message->role = 'all';
                 $message->is_read = false;
                 $message->save();
+                
+                // Create notification for the receiver
+                $this->createMessageNotification($message);
+                
                 $count++;
             }
             
@@ -354,6 +409,10 @@ class MessageController extends Controller
                 $message->group_id = $group->id;
                 $message->is_read = false;
                 $message->save();
+                
+                // Create notification for the receiver
+                $this->createMessageNotification($message);
+                
                 $count++;
             }
             
@@ -480,6 +539,9 @@ class MessageController extends Controller
             $message->receiver_type = 'student'; // المعلمون يرسلون عادة للطلاب
             $message->is_read = false;
             $message->save();
+            
+            // Create notification for the receiver
+            $this->createMessageNotification($message);
             
             \Log::info('Message saved successfully with ID: ' . $message->id);
             

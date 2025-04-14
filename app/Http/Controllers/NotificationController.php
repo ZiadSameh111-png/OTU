@@ -29,41 +29,53 @@ class NotificationController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        $role = strtolower($user->role);
-        
-        // Get notifications for this user
-        $notifications = Notification::forUser($user->id)
-            ->orWhere(function($query) use ($role) {
-                $query->where('receiver_type', 'role')
-                      ->where('role', $role);
-            });
-        
-        // Only include group notifications if the user has a groups relationship
-        if (method_exists($user, 'groups') && $user->groups !== null) {
-            $notifications = $notifications->orWhere(function($query) use ($user) {
-                $query->where('receiver_type', 'group')
-                      ->whereIn('group_id', $user->groups->pluck('id'));
-            });
-        } elseif ($user->group) {
-            // If user has a single group relationship instead
-            $notifications = $notifications->orWhere(function($query) use ($user) {
-                $query->where('receiver_type', 'group')
-                      ->where('group_id', $user->group->id);
-            });
-        }
-        
-        $notifications = $notifications->orderBy('created_at', 'desc')
-            ->paginate(10);
+        try {
+            $user = Auth::user();
+            $role = strtolower($user->role);
             
-        $unread_count = Notification::forUser($user->id)->unread()->count();
-        
-        if ($user->role === 'Admin') {
-            return view('admin.notifications.index', compact('notifications', 'unread_count'));
-        } elseif ($user->role === 'Teacher') {
-            return view('teacher.notifications.index', compact('notifications', 'unread_count'));
-        } else {
-            return view('student.notifications.index', compact('notifications', 'unread_count'));
+            \Log::info('Fetching notifications for user: ' . $user->name . ' (ID: ' . $user->id . ')');
+            
+            // Start with personal notifications
+            $query = Notification::where('receiver_id', $user->id);
+            
+            // Add role-based notifications
+            $query->orWhere(function($q) use ($role) {
+                $q->where('receiver_type', 'role')
+                  ->where('role', $role);
+            });
+            
+            // Add group-based notifications if applicable
+            if ($user->group_id) {
+                $query->orWhere(function($q) use ($user) {
+                    $q->where('receiver_type', 'group')
+                      ->where('group_id', $user->group_id);
+                });
+            }
+            
+            // Get the notifications
+            $notifications = $query->orderBy('created_at', 'desc')
+                ->paginate(10);
+                
+            \Log::info('Found ' . $notifications->count() . ' notifications for user');
+            
+            // Count unread notifications
+            $unread_count = Notification::where('receiver_id', $user->id)
+                ->whereNull('read_at')
+                ->count();
+            
+            // Return the appropriate view based on user role
+            if ($user->role === 'Admin') {
+                return view('admin.notifications.index', compact('notifications', 'unread_count'));
+            } elseif ($user->role === 'Teacher') {
+                return view('teacher.notifications.index', compact('notifications', 'unread_count'));
+            } else {
+                return view('student.notifications.index', compact('notifications', 'unread_count'));
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error retrieving notifications: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            
+            return back()->with('error', 'حدث خطأ أثناء تحميل الإشعارات');
         }
     }
 
@@ -75,44 +87,90 @@ class NotificationController extends Controller
      */
     public function store(Request $request)
     {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'receiver_type' => 'required|in:user,group,role',
-            'notification_type' => 'required|in:general,academic,announcement,exam',
-        ]);
-        
-        $user = Auth::user();
-        
-        // Create base notification data
-        $notificationData = [
-            'title' => $request->title,
-            'description' => $request->description,
-            'sender_id' => $user->id,
-            'receiver_type' => $request->receiver_type,
-            'notification_type' => $request->notification_type,
-            'url' => $request->url,
-        ];
-        
-        // Handle different receiver types
-        if ($request->receiver_type === 'user') {
-            $request->validate(['receiver_id' => 'required|exists:users,id']);
-            $notificationData['receiver_id'] = $request->receiver_id;
+        try {
+            $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'required|string',
+                'receiver_type' => 'required|in:user,group,role',
+                'notification_type' => 'required|in:general,academic,announcement,exam',
+            ]);
             
-            Notification::create($notificationData);
-        } elseif ($request->receiver_type === 'group') {
-            $request->validate(['group_id' => 'required|exists:groups,id']);
-            $notificationData['group_id'] = $request->group_id;
+            $user = Auth::user();
+            \Log::info('Notification creation attempt by: ' . $user->name . ' (ID: ' . $user->id . ')');
+            \Log::info('Notification data: ', $request->all());
             
-            Notification::create($notificationData);
-        } elseif ($request->receiver_type === 'role') {
-            $request->validate(['role' => 'required|in:admin,teacher,student']);
-            $notificationData['role'] = $request->role;
+            // Create base notification data
+            $notificationData = [
+                'title' => $request->title,
+                'description' => $request->description,
+                'sender_id' => $user->id,
+                'receiver_type' => $request->receiver_type,
+                'notification_type' => $request->notification_type,
+                'url' => $request->url,
+            ];
             
-            Notification::create($notificationData);
+            // Handle different receiver types
+            if ($request->receiver_type === 'user') {
+                $request->validate(['receiver_id' => 'required|exists:users,id']);
+                $notificationData['receiver_id'] = $request->receiver_id;
+                
+                $notification = Notification::create($notificationData);
+                \Log::info('Created user notification with ID: ' . $notification->id);
+                
+            } elseif ($request->receiver_type === 'group') {
+                $request->validate(['group_id' => 'required|exists:groups,id']);
+                $notificationData['group_id'] = $request->group_id;
+                
+                // Get all students in the group and create individual notifications
+                $group = \App\Models\Group::findOrFail($request->group_id);
+                
+                if (method_exists($group, 'students') && $group->students->count() > 0) {
+                    foreach ($group->students as $student) {
+                        $studentNotification = $notificationData;
+                        $studentNotification['receiver_id'] = $student->id;
+                        Notification::create($studentNotification);
+                    }
+                    \Log::info('Created group notifications for group ID: ' . $request->group_id);
+                } else {
+                    // Still create the group notification even if no students
+                    $notification = Notification::create($notificationData);
+                    \Log::info('Created empty group notification with ID: ' . $notification->id);
+                }
+                
+            } elseif ($request->receiver_type === 'role') {
+                $request->validate(['role' => 'required|in:admin,teacher,student']);
+                $notificationData['role'] = $request->role;
+                
+                // First create the role notification 
+                $notification = Notification::create($notificationData);
+                \Log::info('Created role notification with ID: ' . $notification->id);
+                
+                // Then create individual notifications for each user in that role
+                $roleUsers = \App\Models\User::whereHas('roles', function($query) use ($request) {
+                    $query->where('name', ucfirst($request->role));
+                })->get();
+                
+                if ($roleUsers->count() > 0) {
+                    foreach ($roleUsers as $roleUser) {
+                        $userNotification = $notificationData;
+                        $userNotification['receiver_id'] = $roleUser->id;
+                        Notification::create($userNotification);
+                    }
+                    \Log::info('Created individual notifications for ' . $roleUsers->count() . ' users with role: ' . $request->role);
+                }
+            }
+            
+            \Log::info('Notification creation successful');
+            return redirect()->back()->with('success', 'تم إرسال الإشعار بنجاح');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error creating notification: ' . $e->getMessage());
+            \Log::error($e->getTraceAsString());
+            
+            return redirect()->back()
+                ->with('error', 'حدث خطأ أثناء إرسال الإشعار: ' . $e->getMessage())
+                ->withInput();
         }
-        
-        return redirect()->back()->with('success', 'تم إرسال الإشعار بنجاح');
     }
 
     /**
