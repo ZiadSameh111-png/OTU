@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 return new class extends Migration
 {
@@ -14,7 +13,9 @@ return new class extends Migration
      */
     public function up()
     {
-        DB::statement('ALTER TABLE `fee_payments` MODIFY `user_id` BIGINT UNSIGNED NULL');
+        Schema::table('fee_payments', function (Blueprint $table) {
+            $table->foreignId('admin_id')->nullable()->after('user_id')->constrained('users')->onDelete('set null');
+        });
     }
 
     /**
@@ -24,6 +25,9 @@ return new class extends Migration
      */
     public function down()
     {
-        DB::statement('ALTER TABLE `fee_payments` MODIFY `user_id` BIGINT UNSIGNED NOT NULL');
+        Schema::table('fee_payments', function (Blueprint $table) {
+            $table->dropForeign(['admin_id']);
+            $table->dropColumn('admin_id');
+        });
     }
 };

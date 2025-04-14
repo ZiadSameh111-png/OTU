@@ -92,10 +92,6 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/fees/{fee}/payments/create', [App\Http\Controllers\FeePaymentController::class, 'create'])->name('admin.fees.payments.create');
         Route::post('/admin/fees/{fee}/payments', [App\Http\Controllers\FeePaymentController::class, 'store'])->name('admin.fees.payments.store');
         
-        // روابط الرسوم والمدفوعات للمسؤولين
-        Route::resource('fees', App\Http\Controllers\FeesController::class);
-        Route::resource('payments', App\Http\Controllers\FeePaymentsController::class);
-        
         // روابط خاصة للمدفوعات
         Route::get('fees/{fee}/payment', [App\Http\Controllers\FeesController::class, 'createPayment'])->name('fees.payment.create');
         Route::post('fees/{fee}/payment', [App\Http\Controllers\FeesController::class, 'storePayment'])->name('fees.payment.store');
@@ -138,9 +134,9 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/student/messages', [App\Http\Controllers\MessageController::class, 'store'])->name('student.messages.store');
         Route::get('/student/messages/{message}', [App\Http\Controllers\MessageController::class, 'studentShow'])->name('student.messages.show');
         
-        // Student fee routes
-        Route::get('/student/fees', [App\Http\Controllers\FeesController::class, 'studentFees'])->name('student.fees');
-        Route::get('/student/payments', [App\Http\Controllers\FeePaymentsController::class, 'index'])->name('student.payments');
+        // Student fees routes
+        Route::get('/student/fees', [App\Http\Controllers\FeeController::class, 'studentIndex'])->name('student.fees');
+        Route::get('/student/payments', [App\Http\Controllers\FeeController::class, 'studentPayments'])->name('student.payments');
         Route::get('/student/fees/{fee}', [App\Http\Controllers\FeeController::class, 'studentShow'])->name('fees.show');
         Route::get('/student/fees/{fee}/pay', [App\Http\Controllers\FeeController::class, 'pay'])->name('fees.pay');
         Route::post('/student/fees/{fee}/checkout', [App\Http\Controllers\FeeController::class, 'checkout'])->name('fees.checkout');

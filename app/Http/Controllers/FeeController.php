@@ -13,9 +13,21 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use PDF;
+use Illuminate\Support\Facades\Schema;
 
 class FeeController extends Controller
 {
+    /**
+     * Create a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth');
+        $this->middleware('role:Admin', ['except' => ['studentIndex', 'studentShow', 'pay', 'checkout', 'paymentGateway', 'processPayment', 'receipt', 'statement', 'retry']]);
+    }
+
     /**
      * Display a listing of the fees for admin.
      *
@@ -209,27 +221,40 @@ class FeeController extends Controller
     }
     
     /**
-     * Display a listing of the fees for the student.
+     * Display the fees for current student.
      *
      * @return \Illuminate\Http\Response
      */
     public function studentIndex()
     {
-        $user = Auth::user();
-        // Temporary fix to avoid using the fee_group table
-        $fees = Fee::where(function($query) use ($user) {
-            $query->where('user_id', $user->id)
-                  ->orWhere('applies_to_all', true);
-        })
-        ->with('payments')
-        ->get();
-        
-        $totalFees = $fees->sum('amount');
-        $totalPaid = FeePayment::where('user_id', $user->id)
-                                ->where('status', 'completed')
-                                ->sum('amount');
-        
-        return view('student.fees.index', compact('fees', 'totalFees', 'totalPaid'));
+        try {
+            // Get fees without eager loading payments initially
+            $fees = Fee::where('user_id', Auth::id())->get();
+            
+            // Calculate totals from the fees
+            $totalFees = $fees->sum('total_amount');
+            $totalPaid = $fees->sum('paid_amount');
+            
+            // Check if payments table exists by trying to execute a query
+            try {
+                // Only load payments if table exists
+                if (Schema::hasTable('fee_payments')) {
+                    $fees = Fee::where('user_id', Auth::id())->with('payments')->get();
+                }
+            } catch (\Exception $e) {
+                \Log::error('Error loading payments: ' . $e->getMessage());
+                // Continue with fees without payments
+            }
+            
+            return view('student.fees.index', compact('fees', 'totalFees', 'totalPaid'));
+        } catch (\Exception $e) {
+            \Log::error('Error in studentIndex: ' . $e->getMessage());
+            return view('student.fees.index', [
+                'fees' => collect(),
+                'totalFees' => 0,
+                'totalPaid' => 0
+            ])->with('error', 'حدث خطأ أثناء تحميل بيانات الرسوم');
+        }
     }
     
     /**
@@ -563,5 +588,19 @@ class FeeController extends Controller
                             ->firstOrFail();
         
         return view('student.fees.receipt', compact('payment'));
+    }
+    
+    /**
+     * Display the payments for current student.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function studentPayments()
+    {
+        $payments = FeePayment::whereHas('fee', function($query) {
+            $query->where('user_id', Auth::id());
+        })->with('fee')->orderBy('payment_date', 'desc')->get();
+        
+        return view('student.payments.index', compact('payments'));
     }
 }

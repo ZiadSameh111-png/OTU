@@ -14,7 +14,13 @@ return new class extends Migration
     public function up()
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->boolean('is_starred')->default(false)->after('is_read');
+            if (!Schema::hasColumn('messages', 'is_read')) {
+                $table->boolean('is_read')->default(false);
+            }
+            
+            if (!Schema::hasColumn('messages', 'is_starred')) {
+                $table->boolean('is_starred')->default(false);
+            }
         });
     }
 
@@ -26,7 +32,12 @@ return new class extends Migration
     public function down()
     {
         Schema::table('messages', function (Blueprint $table) {
-            $table->dropColumn('is_starred');
+            if (Schema::hasColumn('messages', 'is_starred')) {
+                $table->dropColumn('is_starred');
+            }
+            if (Schema::hasColumn('messages', 'is_read')) {
+                $table->dropColumn('is_read');
+            }
         });
     }
 };

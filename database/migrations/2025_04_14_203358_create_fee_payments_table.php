@@ -15,15 +15,14 @@ return new class extends Migration
     {
         Schema::create('fee_payments', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('fee_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('fee_id')->constrained('fees')->onDelete('cascade');
             $table->decimal('amount', 10, 2);
-            $table->string('payment_method');
+            $table->string('payment_method')->default('cash');
             $table->string('transaction_id')->nullable();
             $table->timestamp('payment_date');
-            $table->string('status')->default('pending');
+            $table->string('status')->default('completed');
             $table->text('description')->nullable();
-            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
