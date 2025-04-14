@@ -224,7 +224,13 @@ class MessageController extends Controller
             $message->markAsRead();
         }
         
-        return view('admin.messages.show', compact('message'));
+        // Get sender information
+        $sender = $message->sender;
+        
+        // Check if the message can be replied to (if it's sent to the current user)
+        $canReply = $message->receiver_id == Auth::id();
+        
+        return view('admin.messages.show', compact('message', 'sender', 'canReply'));
     }
 
     /**
@@ -235,7 +241,7 @@ class MessageController extends Controller
         $request->validate([
             'subject' => 'required|string|max:255',
             'content' => 'required|string',
-            'recipient_type' => 'required|in:student,teacher,group',
+            'recipient_type' => 'required|in:student,teacher,group,all_students,all_teachers',
         ]);
 
         // تحديد المستلم بناءً على النوع
@@ -244,9 +250,87 @@ class MessageController extends Controller
         if ($request->recipient_type == 'student') {
             $request->validate(['student_id' => 'required|exists:users,id']);
             $receiverId = $request->student_id;
+            
+            // إرسال الرسالة للطالب المحدد
+            $message = new Message();
+            $message->subject = $request->subject;
+            $message->content = $request->content;
+            $message->sender_id = Auth::id();
+            $message->receiver_id = $receiverId;
+            $message->receiver_type = 'student';
+            $message->is_read = false;
+            $message->save();
+            
+            return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
+            
         } elseif ($request->recipient_type == 'teacher') {
             $request->validate(['teacher_id' => 'required|exists:users,id']);
             $receiverId = $request->teacher_id;
+            
+            // إرسال الرسالة للمعلم المحدد
+            $message = new Message();
+            $message->subject = $request->subject;
+            $message->content = $request->content;
+            $message->sender_id = Auth::id();
+            $message->receiver_id = $receiverId;
+            $message->receiver_type = 'teacher';
+            $message->is_read = false;
+            $message->save();
+            
+            return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
+            
+        } elseif ($request->recipient_type == 'all_students') {
+            // إرسال لجميع الطلاب
+            $students = User::whereHas('roles', function($query) {
+                $query->where('name', 'Student');
+            })->get();
+            
+            if ($students->isEmpty()) {
+                return redirect()->back()->with('error', 'لا يوجد طلاب في النظام');
+            }
+            
+            $count = 0;
+            foreach ($students as $student) {
+                $message = new Message();
+                $message->subject = $request->subject;
+                $message->content = $request->content;
+                $message->sender_id = Auth::id();
+                $message->receiver_id = $student->id;
+                $message->receiver_type = 'student';
+                $message->role = 'all';
+                $message->is_read = false;
+                $message->save();
+                $count++;
+            }
+            
+            return redirect()->back()->with('success', "تم إرسال الرسالة بنجاح إلى {$count} طالب");
+            
+        } elseif ($request->recipient_type == 'all_teachers') {
+            // إرسال لجميع المعلمين
+            $teachers = User::whereHas('roles', function($query) {
+                $query->where('name', 'Teacher');
+            })->get();
+            
+            if ($teachers->isEmpty()) {
+                return redirect()->back()->with('error', 'لا يوجد معلمين في النظام');
+            }
+            
+            $count = 0;
+            foreach ($teachers as $teacher) {
+                $message = new Message();
+                $message->subject = $request->subject;
+                $message->content = $request->content;
+                $message->sender_id = Auth::id();
+                $message->receiver_id = $teacher->id;
+                $message->receiver_type = 'teacher';
+                $message->role = 'all';
+                $message->is_read = false;
+                $message->save();
+                $count++;
+            }
+            
+            return redirect()->back()->with('success', "تم إرسال الرسالة بنجاح إلى {$count} معلم");
+            
         } elseif ($request->recipient_type == 'group') {
             $request->validate(['group_id' => 'required|exists:groups,id']);
             
@@ -258,31 +342,22 @@ class MessageController extends Controller
                 return redirect()->back()->with('error', 'لا يوجد طلاب في هذه المجموعة');
             }
             
+            $count = 0;
             // إرسال الرسالة لكل طالب في المجموعة
             foreach ($group->students as $student) {
                 $message = new Message();
                 $message->subject = $request->subject;
-                $message->body = $request->content;
+                $message->content = $request->content;
                 $message->sender_id = Auth::id();
                 $message->receiver_id = $student->id;
+                $message->receiver_type = 'group';
+                $message->group_id = $group->id;
                 $message->is_read = false;
                 $message->save();
+                $count++;
             }
             
-            return redirect()->back()->with('success', 'تم إرسال الرسالة لجميع طلاب المجموعة بنجاح');
-        }
-        
-        // إرسال الرسالة للمستلم الفردي
-        if ($receiverId) {
-            $message = new Message();
-            $message->subject = $request->subject;
-            $message->body = $request->content;
-            $message->sender_id = Auth::id();
-            $message->receiver_id = $receiverId;
-            $message->is_read = false;
-            $message->save();
-            
-            return redirect()->back()->with('success', 'تم إرسال الرسالة بنجاح');
+            return redirect()->back()->with('success', "تم إرسال الرسالة بنجاح إلى {$count} طالب في المجموعة");
         }
         
         return redirect()->back()->with('error', 'حدث خطأ أثناء إرسال الرسالة');
@@ -398,9 +473,11 @@ class MessageController extends Controller
             // إنشاء رسالة جديدة
             $message = new Message();
             $message->subject = $request->subject;
-            $message->body = $request->content; // تخزين المحتوى في حقل body
+            $message->content = $request->content; // تخزين المحتوى في حقل content
+            $message->body = $request->content; // تخزين المحتوى في حقل body للتوافق
             $message->sender_id = Auth::id();
             $message->receiver_id = $request->recipient_id; // تعيين receiver_id من recipient_id
+            $message->receiver_type = 'student'; // المعلمون يرسلون عادة للطلاب
             $message->is_read = false;
             $message->save();
             

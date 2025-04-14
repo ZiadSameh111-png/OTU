@@ -44,6 +44,8 @@
                                 <option value="student" {{ old('recipient_type') == 'student' ? 'selected' : '' }}>طالب</option>
                                 <option value="teacher" {{ old('recipient_type') == 'teacher' ? 'selected' : '' }}>دكتور</option>
                                 <option value="group" {{ old('recipient_type') == 'group' ? 'selected' : '' }}>مجموعة</option>
+                                <option value="all_students" {{ old('recipient_type') == 'all_students' ? 'selected' : '' }}>جميع الطلاب</option>
+                                <option value="all_teachers" {{ old('recipient_type') == 'all_teachers' ? 'selected' : '' }}>جميع الدكاترة</option>
                             </select>
                             @error('recipient_type')
                                 <div class="invalid-feedback">{{ $message }}</div>
@@ -237,40 +239,34 @@
 
 @section('scripts')
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // استهداف حقل نوع المستلم
-        const recipientTypeSelect = document.getElementById('recipient_type');
+    $(document).ready(function() {
+        // Hide all recipient fields initially
+        $('#student-field, #teacher-field, #group-field').hide();
         
-        // استهداف حقول المستلمين
-        const studentField = document.getElementById('student-field');
-        const teacherField = document.getElementById('teacher-field');
-        const groupField = document.getElementById('group-field');
-        
-        // تفعيل الحقل المناسب بناءً على اختيار نوع المستلم
-        recipientTypeSelect.addEventListener('change', function() {
-            // إخفاء جميع الحقول أولًا
-            studentField.style.display = 'none';
-            teacherField.style.display = 'none';
-            groupField.style.display = 'none';
+        // Show the appropriate recipient field based on the selected recipient type
+        $('#recipient_type').change(function() {
+            $('#student-field, #teacher-field, #group-field').hide();
             
-            // إظهار الحقل المناسب بناءً على الاختيار
-            const selectedValue = this.value;
-            if (selectedValue === 'student') {
-                studentField.style.display = 'block';
-            } else if (selectedValue === 'teacher') {
-                teacherField.style.display = 'block';
-            } else if (selectedValue === 'group') {
-                groupField.style.display = 'block';
+            const selectedType = $(this).val();
+            
+            if (selectedType === 'student') {
+                $('#student-field').show();
+            } else if (selectedType === 'teacher') {
+                $('#teacher-field').show();
+            } else if (selectedType === 'group') {
+                $('#group-field').show();
             }
+            // For all_students and all_teachers, no recipient selection is needed
         });
         
-        // تحديد الحقل الظاهر عند تحميل الصفحة إذا كان هناك قيمة محددة مسبقًا
-        if (recipientTypeSelect.value === 'student') {
-            studentField.style.display = 'block';
-        } else if (recipientTypeSelect.value === 'teacher') {
-            teacherField.style.display = 'block';
-        } else if (recipientTypeSelect.value === 'group') {
-            groupField.style.display = 'block';
+        // If there's a pre-selected value (e.g., from validation errors), show the appropriate field
+        const selectedType = $('#recipient_type').val();
+        if (selectedType === 'student') {
+            $('#student-field').show();
+        } else if (selectedType === 'teacher') {
+            $('#teacher-field').show();
+        } else if (selectedType === 'group') {
+            $('#group-field').show();
         }
 
         // Star toggle functionality

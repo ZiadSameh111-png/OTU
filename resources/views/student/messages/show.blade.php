@@ -85,7 +85,7 @@
                                 </p>
                                 <p class="mb-1">
                                     <strong><i class="fas fa-user-circle me-2 text-primary"></i>المستلم:</strong>
-                                    {{ $message->recipient->name }}
+                                    {{ $message->receiver->name }}
                                 </p>
                             </div>
                             <div class="col-md-6 text-md-end">
@@ -104,8 +104,8 @@
                     </div>
                     
                     <div class="message-content mb-4">
-                        <h6 class="mb-3"><i class="fas fa-align-right me-2 text-primary"></i>محتوى الرسالة:</h6>
-                        <div class="p-4 bg-light rounded">
+                        <h6 class="mb-3"><i class="fas fa-align-right me-2 text-primary"></i><span class="fw-bold text-white bg-dark px-2 py-1 rounded">محتوى الرسالة:</span></h6>
+                        <div class="p-4 bg-white text-dark rounded border">
                             {{ $message->content }}
                         </div>
                     </div>

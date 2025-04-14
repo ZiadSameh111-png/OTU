@@ -218,4 +218,61 @@ class ScheduleController extends Controller
             'groupName' => $group->name
         ]);
     }
+
+    /**
+     * Display the schedules for the logged-in teacher.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function teacherSchedule()
+    {
+        // Check if user has Teacher role
+        if (!Auth::user()->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to view this page.');
+        }
+
+        // Get the teacher's ID
+        $teacherId = Auth::id();
+
+        // Get the teacher's courses
+        $courses = Course::where('teacher_id', $teacherId)->pluck('id');
+        
+        // Get schedules for these courses
+        $schedules = Schedule::whereIn('course_id', $courses)
+            ->with(['course', 'group'])
+            ->get();
+        
+        return view('teacher.schedule', [
+            'schedules' => $schedules,
+            'teacherName' => Auth::user()->name
+        ]);
+    }
+
+    /**
+     * Display the schedule details for a teacher.
+     *
+     * @param  \App\Models\Schedule  $schedule
+     * @return \Illuminate\Http\Response
+     */
+    public function teacherShow(Schedule $schedule)
+    {
+        // Check if user has Teacher role
+        if (!Auth::user()->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'You do not have permission to view this page.');
+        }
+
+        // Check if the schedule belongs to a course taught by this teacher
+        $teacherId = Auth::id();
+        $courseIds = Course::where('teacher_id', $teacherId)->pluck('id')->toArray();
+        
+        if (!in_array($schedule->course_id, $courseIds)) {
+            return redirect()->route('teacher.schedule')
+                ->with('error', 'You do not have permission to view this schedule.');
+        }
+        
+        // Load the schedule with related data
+        $schedule->load(['course', 'group']);
+        
+        return view('teacher.schedule-show', compact('schedule'));
+    }
 }

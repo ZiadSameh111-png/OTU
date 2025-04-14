@@ -333,14 +333,9 @@
                                             <td>{{ $message->subject }}</td>
                                             <td>{{ \Carbon\Carbon::parse($message->created_at)->format('Y-m-d H:i A') }}</td>
                                             <td>
-                                                <button type="button" class="btn btn-sm btn-primary view-message-btn" 
-                                                        data-bs-toggle="modal" data-bs-target="#viewMessageModal"
-                                                        data-subject="{{ $message->subject }}" 
-                                                        data-body="{{ $message->body }}"
-                                                        data-date="{{ \Carbon\Carbon::parse($message->created_at)->format('Y-m-d H:i A') }}"
-                                                        data-recipient="{{ $message->receiver_name }}">
+                                                <a href="{{ route('admin.messages.show', $message->id) }}" class="btn btn-sm btn-primary">
                                                     <i class="fas fa-eye me-1"></i> عرض
-                                                </button>
+                                                </a>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -408,56 +403,11 @@
     </div>
 </div>
 
-<!-- Modal for viewing message details -->
-<div class="modal fade" id="viewMessageModal" tabindex="-1" aria-labelledby="viewMessageModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="viewMessageModalLabel">عرض الرسالة</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="fw-bold">المستلم:</label>
-                    <p id="modal-recipient"></p>
-                </div>
-                <div class="mb-3">
-                    <label class="fw-bold">العنوان:</label>
-                    <p id="modal-subject"></p>
-                </div>
-                <div class="mb-3">
-                    <label class="fw-bold">المحتوى:</label>
-                    <div id="modal-body" class="p-3 bg-light rounded"></div>
-                </div>
-                <div>
-                    <label class="fw-bold">تاريخ الإرسال:</label>
-                    <p id="modal-date" class="text-muted"></p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 @endsection
 
 @push('scripts')
 <script>
-    // Script for message modal
-    document.addEventListener('DOMContentLoaded', function() {
-        const viewMessageBtns = document.querySelectorAll('.view-message-btn');
-        
-        viewMessageBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.getElementById('modal-subject').textContent = this.getAttribute('data-subject');
-                document.getElementById('modal-body').textContent = this.getAttribute('data-body');
-                document.getElementById('modal-date').textContent = this.getAttribute('data-date');
-                document.getElementById('modal-recipient').textContent = this.getAttribute('data-recipient');
-            });
-        });
-    });
+    // Other scripts can go here
 </script>
 @endpush
 

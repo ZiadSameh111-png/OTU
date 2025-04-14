@@ -368,16 +368,30 @@
                                                 <span class="badge bg-danger ms-1">جديد</span>
                                             @endif
                                         </h6>
-                                        <small class="text-muted">{{ $message->created_at->format('Y-m-d') }}</small>
+                                        <small class="text-muted">
+                                            @if(is_string($message->created_at))
+                                                {{ $message->created_at }}
+                                            @else
+                                                {{ $message->created_at->format('Y-m-d') }}
+                                            @endif
+                                        </small>
                                     </div>
-                                    <p class="mb-1 text-muted small">من: {{ $message->sender->name }}</p>
+                                    <p class="mb-1 text-muted small">من: 
+                                        @if(isset($message->sender_name))
+                                            {{ $message->sender_name }}
+                                        @elseif(isset($message->sender->name))
+                                            {{ $message->sender->name }}
+                                        @else
+                                            مرسل غير معروف
+                                        @endif
+                                    </p>
                                     <div class="d-flex justify-content-end">
                                         <button type="button" class="btn btn-sm btn-primary view-message-btn" 
                                                 data-bs-toggle="modal" data-bs-target="#viewMessageModal"
                                                 data-subject="{{ $message->subject }}" 
                                                 data-body="{{ $message->body }}"
-                                                data-date="{{ $message->created_at->format('Y-m-d H:i A') }}"
-                                                data-sender="{{ $message->sender->name }}"
+                                                data-date="@if(is_string($message->created_at)){{ $message->created_at }}@else{{ $message->created_at->format('Y-m-d H:i A') }}@endif"
+                                                data-sender="@if(isset($message->sender_name)){{ $message->sender_name }}@elseif(isset($message->sender->name)){{ $message->sender->name }}@else{{ 'مرسل غير معروف' }}@endif"
                                                 data-message-id="{{ $message->id }}">
                                             <i class="fas fa-eye me-1"></i> عرض
                                         </button>

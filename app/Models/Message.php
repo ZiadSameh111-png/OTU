@@ -13,12 +13,16 @@ class Message extends Model
         'sender_id',
         'receiver_id',
         'subject',
+        'content',
         'body',
         'is_read',
         'is_starred',
         'read_at',
         'attachment',
         'category',
+        'receiver_type',
+        'group_id',
+        'role'
     ];
 
     protected $casts = [

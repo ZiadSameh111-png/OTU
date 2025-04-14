@@ -259,6 +259,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/notifications/{notification}/mark-read', [App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
     Route::get('/notifications/mark-all-read', [App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
     Route::delete('/notifications/{notification}', [App\Http\Controllers\NotificationController::class, 'destroy'])->name('notifications.destroy');
+    
+    // New notification trash management routes
+    Route::get('/notifications/trash', [App\Http\Controllers\NotificationController::class, 'trash'])->name('notifications.trash');
+    Route::post('/notifications/{id}/restore', [App\Http\Controllers\NotificationController::class, 'restore'])->name('notifications.restore');
+    Route::delete('/notifications/{id}/force-delete', [App\Http\Controllers\NotificationController::class, 'forceDelete'])->name('notifications.forceDelete');
 });
 
 // Student Admin Requests Routes

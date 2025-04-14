@@ -205,12 +205,68 @@ class NotificationController extends Controller
         $notification = Notification::findOrFail($id);
         $user = Auth::user();
         
-        // Only delete if user is admin or the notification's sender
-        if ($user->role === 'Admin' || $notification->sender_id === $user->id) {
+        // Only delete if user is admin or the notification's sender or receiver
+        if ($user->role === 'Admin' || $notification->sender_id === $user->id || $notification->receiver_id === $user->id) {
             $notification->delete();
             return redirect()->back()->with('success', 'تم حذف الإشعار بنجاح');
         }
         
         return redirect()->back()->with('error', 'غير مصرح بحذف هذا الإشعار');
+    }
+
+    /**
+     * Display a listing of the trashed notifications.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function trash()
+    {
+        $user = Auth::user();
+        $trashedNotifications = Notification::onlyTrashed()
+            ->where('receiver_id', $user->id)
+            ->orderBy('deleted_at', 'desc')
+            ->get();
+        
+        return response()->json($trashedNotifications);
+    }
+    
+    /**
+     * Restore the specified notification from trash.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function restore($id)
+    {
+        $notification = Notification::onlyTrashed()->findOrFail($id);
+        $user = Auth::user();
+        
+        // Only restore if user is the notification's receiver
+        if ($notification->receiver_id === $user->id) {
+            $notification->restore();
+            return response()->json(['success' => true, 'message' => 'تم استعادة الإشعار بنجاح']);
+        }
+        
+        return response()->json(['success' => false, 'message' => 'غير مصرح باستعادة هذا الإشعار']);
+    }
+    
+    /**
+     * Permanently delete the specified notification.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function forceDelete($id)
+    {
+        $notification = Notification::onlyTrashed()->findOrFail($id);
+        $user = Auth::user();
+        
+        // Only force delete if user is the notification's receiver
+        if ($notification->receiver_id === $user->id) {
+            $notification->forceDelete();
+            return response()->json(['success' => true, 'message' => 'تم حذف الإشعار نهائيًا']);
+        }
+        
+        return response()->json(['success' => false, 'message' => 'غير مصرح بحذف هذا الإشعار نهائيًا']);
     }
 }

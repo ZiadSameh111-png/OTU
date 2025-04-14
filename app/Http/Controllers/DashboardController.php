@@ -100,7 +100,7 @@ class DashboardController extends Controller
 
         // Due fees students
         $dueFeesStudents = \DB::table('fees')
-            ->select('fees.*', 'users.name as student_name')
+            ->select('fees.*', 'users.name as student_name', \DB::raw('(total_amount - paid_amount) as remaining_amount'))
             ->join('users', 'fees.user_id', '=', 'users.id')
             ->whereRaw('total_amount > paid_amount')
             ->take(10)
