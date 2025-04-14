@@ -76,18 +76,18 @@
                     <!-- Result Summary -->
                     <div class="card bg-light mb-4">
                         <div class="card-body text-center">
-                            <h5 class="card-title">ملخص النتائج</h5>
+                            <h5 class="card-title fw-bold text-dark">ملخص النتائج</h5>
                             <div class="result-summary mb-3">
-                                <div class="result-score">
+                                <div class="result-score fw-bold text-dark">
                                     {{ $attempt->total_marks_obtained ?? 0 }} / {{ $attempt->total_possible_marks ?? $exam->total_marks }}
                                 </div>
-                                <div class="result-percentage">
+                                <div class="result-percentage fw-bold text-dark">
                                     {{ $attempt->scorePercentage() }}%
                                 </div>
                             </div>
                             
                             @if($attempt->is_graded)
-                                <div class="badge badge-success p-2">تم التصحيح بالكامل</div>
+                                <div class="badge badge-success p-2 fw-bold">تم التصحيح بالكامل</div>
                             @else
                                 <div class="badge badge-warning p-2">جاري التصحيح</div>
                                 <p class="text-muted mt-2 small">بعض الأسئلة قد تحتاج إلى تصحيح يدوي من المدرس.</p>
