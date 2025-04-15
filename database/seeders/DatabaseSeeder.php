@@ -23,7 +23,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             RoleSeeder::class,
-            AdminUserSeeder::class,
+            // AdminUserSeeder::class, // Commented out as we'll use UsersTableSeeder instead
+            UsersTableSeeder::class, // Our new seeder that creates 3 users with different roles
             GroupSeeder::class,
         ]);
 
