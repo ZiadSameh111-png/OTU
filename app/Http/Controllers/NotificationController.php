@@ -61,7 +61,7 @@ class NotificationController extends Controller
             // Count unread notifications
             $unread_count = Notification::where('receiver_id', $user->id)
                 ->whereNull('read_at')
-                ->count();
+            ->count();
             
             // Return the appropriate view based on user role
             if ($user->role === 'Admin') {
@@ -95,7 +95,7 @@ class NotificationController extends Controller
                 'notification_type' => 'required|in:general,academic,announcement,exam',
             ]);
             
-            $user = Auth::user();
+        $user = Auth::user();
             \Log::info('Notification creation attempt by: ' . $user->name . ' (ID: ' . $user->id . ')');
             \Log::info('Notification data: ', $request->all());
             
