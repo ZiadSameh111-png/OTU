@@ -14,6 +14,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
 
 class ExamController extends Controller
 {
@@ -812,7 +813,7 @@ class ExamController extends Controller
     }
 
     /**
-     * Display a listing of exam results for students.
+     * Display the student's results.
      *
      * @return \Illuminate\View\View
      */
@@ -820,12 +821,26 @@ class ExamController extends Controller
     {
         $student = Auth::user();
         
-        // Get all submitted attempts for the student
-        $attempts = StudentExamAttempt::where('student_id', $student->id)
-            ->whereIn('status', ['submitted', 'graded'])
-            ->with(['exam', 'exam.course'])
-            ->orderBy('submit_time', 'desc')
-            ->get();
+        try {
+            // Check if the required table and columns exist
+            if (Schema::hasTable('student_exam_attempts') &&
+                Schema::hasColumn('student_exam_attempts', 'student_id') &&
+                Schema::hasColumn('student_exam_attempts', 'status') &&
+                Schema::hasColumn('student_exam_attempts', 'submit_time')) {
+                
+                // Get all submitted attempts for the student
+                $attempts = StudentExamAttempt::where('student_id', $student->id)
+                    ->whereIn('status', ['submitted', 'graded'])
+                    ->with(['exam', 'exam.course'])
+                    ->orderBy('submit_time', 'desc')
+                    ->get();
+            } else {
+                $attempts = collect();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching student exam attempts: ' . $e->getMessage());
+            $attempts = collect();
+        }
         
         return view('student.exams.results-index', compact('attempts'));
     }

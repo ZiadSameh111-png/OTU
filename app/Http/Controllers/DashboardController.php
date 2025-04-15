@@ -12,6 +12,7 @@ use App\Models\AdminRequest;
 use App\Models\TeacherAttendance;
 use App\Models\StudentAttendance;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -63,11 +64,21 @@ class DashboardController extends Controller
         ];
 
         // Get pending admin requests
-        $pendingRequests = AdminRequest::with('student')
-            ->where('status', 'pending')
-            ->orderBy('request_date', 'desc')
-            ->take(10)
-            ->get();
+        try {
+            if (Schema::hasColumn('admin_requests', 'status') && Schema::hasColumn('admin_requests', 'request_date')) {
+                $pendingRequests = AdminRequest::with('student')
+                    ->where('status', 'pending')
+                    ->orderBy('request_date', 'desc')
+                    ->take(10)
+                    ->get();
+            } else {
+                // If columns don't exist yet, return an empty collection
+                $pendingRequests = collect();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching admin requests: ' . $e->getMessage());
+            $pendingRequests = collect();
+        }
 
         // Today's teacher attendance
         $teachersAttendance = [];
@@ -76,19 +87,47 @@ class DashboardController extends Controller
             $query->where('name', 'Teacher');
         })->get();
         
-        foreach ($teachers as $teacher) {
-            $attendance = TeacherAttendance::where('teacher_id', $teacher->id)
-                ->whereDate('attendance_date', $today)
-                ->first();
-            
-            if ($attendance) {
-                $teachersAttendance[] = [
-                    'teacher' => $teacher,
-                    'status' => $attendance->status,
-                    'notes' => $attendance->notes,
-                    'attendance_id' => $attendance->id
-                ];
+        try {
+            if (Schema::hasColumn('teacher_attendances', 'teacher_id') && 
+                Schema::hasColumn('teacher_attendances', 'attendance_date') &&
+                Schema::hasColumn('teacher_attendances', 'status')) {
+                
+                foreach ($teachers as $teacher) {
+                    $attendance = TeacherAttendance::where('teacher_id', $teacher->id)
+                        ->whereDate('attendance_date', $today)
+                        ->first();
+                    
+                    if ($attendance) {
+                        $teachersAttendance[] = [
+                            'teacher' => $teacher,
+                            'status' => $attendance->status,
+                            'notes' => $attendance->notes,
+                            'attendance_id' => $attendance->id
+                        ];
+                    } else {
+                        $teachersAttendance[] = [
+                            'teacher' => $teacher,
+                            'status' => 'not_recorded',
+                            'notes' => null,
+                            'attendance_id' => null
+                        ];
+                    }
+                }
             } else {
+                // If the required columns don't exist, add default entries for all teachers
+                foreach ($teachers as $teacher) {
+                    $teachersAttendance[] = [
+                        'teacher' => $teacher,
+                        'status' => 'not_recorded',
+                        'notes' => null,
+                        'attendance_id' => null
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error processing teacher attendance: ' . $e->getMessage());
+            // Provide default entries for all teachers
+            foreach ($teachers as $teacher) {
                 $teachersAttendance[] = [
                     'teacher' => $teacher,
                     'status' => 'not_recorded',
@@ -107,15 +146,26 @@ class DashboardController extends Controller
             ->get();
 
         // Recent messages sent by admin
-        $recentMessages = \DB::table('messages')
-            ->select('messages.*', 'users.name as receiver_name', 'roles.name as receiver_type')
-            ->join('users', 'messages.receiver_id', '=', 'users.id')
-            ->join('role_user', 'users.id', '=', 'role_user.user_id')
-            ->join('roles', 'role_user.role_id', '=', 'roles.id')
-            ->where('messages.sender_id', Auth::id())
-            ->orderBy('messages.created_at', 'desc')
-            ->take(10)
-            ->get();
+        $recentMessages = collect();
+        try {
+            if (Schema::hasTable('messages') && 
+                Schema::hasColumn('messages', 'sender_id') && 
+                Schema::hasColumn('messages', 'receiver_id') && 
+                Schema::hasColumn('messages', 'created_at')) {
+                
+                $recentMessages = \DB::table('messages')
+                    ->select('messages.*', 'users.name as receiver_name', 'roles.name as receiver_type')
+                    ->join('users', 'messages.receiver_id', '=', 'users.id')
+                    ->join('role_user', 'users.id', '=', 'role_user.user_id')
+                    ->join('roles', 'role_user.role_id', '=', 'roles.id')
+                    ->where('messages.sender_id', Auth::id())
+                    ->orderBy('messages.created_at', 'desc')
+                    ->take(10)
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching admin messages: ' . $e->getMessage());
+        }
 
         // Quick notifications for admin dashboard
         $quickNotifications = [];
@@ -131,17 +181,23 @@ class DashboardController extends Controller
         }
 
         // Add notification for absent teachers
-        $absentTeachersCount = TeacherAttendance::whereDate('attendance_date', $today)
-            ->where('status', 'absent')
-            ->count();
-
-        if ($absentTeachersCount > 0) {
-            $quickNotifications[] = [
-                'type' => 'attendance',
-                'message' => 'هناك ' . $absentTeachersCount . ' دكتور متغيب اليوم',
-                'date' => Carbon::now()->subHours(1),
-                'link' => route('admin.attendance')
-            ];
+        try {
+            if (Schema::hasColumn('teacher_attendances', 'status') && Schema::hasColumn('teacher_attendances', 'attendance_date')) {
+                $absentTeachersCount = TeacherAttendance::whereDate('attendance_date', $today)
+                    ->where('status', 'absent')
+                    ->count();
+                    
+                if ($absentTeachersCount > 0) {
+                    $quickNotifications[] = [
+                        'type' => 'attendance',
+                        'message' => 'هناك ' . $absentTeachersCount . ' دكتور متغيب اليوم',
+                        'date' => Carbon::now()->subHours(1),
+                        'link' => route('admin.attendance')
+                    ];
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching teacher attendance: ' . $e->getMessage());
         }
 
         // Add notification for due fees
@@ -183,16 +239,28 @@ class DashboardController extends Controller
         $teacherCourses = Course::where('teacher_id', $user->id)->with('groups')->get();
         $teacherGroupIds = $teacherCourses->pluck('groups')->flatten()->pluck('id')->unique();
         
+        $unreadMessagesCount = 0;
+        try {
+            if (Schema::hasTable('messages') && 
+                Schema::hasColumn('messages', 'receiver_id') && 
+                Schema::hasColumn('messages', 'read_at')) {
+                
+                $unreadMessagesCount = \DB::table('messages')
+                    ->where('receiver_id', $user->id)
+                    ->whereNull('read_at')
+                    ->count();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error counting unread messages: ' . $e->getMessage());
+        }
+
         $stats = [
             'coursesCount' => $teacherCourses->count(),
             'groupsCount' => $teacherGroupIds->count(),
             'sessionsCount' => Schedule::whereIn('course_id', $teacherCourses->pluck('id'))
                 ->where('day', $today->format('l'))
                 ->count(),
-            'unreadMessages' => \DB::table('messages')
-                ->where('receiver_id', $user->id)
-                ->whereNull('read_at')
-                ->count()
+            'unreadMessages' => $unreadMessagesCount
         ];
 
         // Today's schedule for the teacher
@@ -203,31 +271,63 @@ class DashboardController extends Controller
             ->get();
 
         // Recent attendance records made by the teacher
-        $recentAttendance = StudentAttendance::where('teacher_id', $user->id)
-            ->select(\DB::raw('MIN(id) as id, schedule_id, date, COUNT(CASE WHEN status = "present" THEN 1 END) as present_count, COUNT(CASE WHEN status = "absent" THEN 1 END) as absent_count'))
-            ->groupBy('schedule_id', 'date')
-            ->orderBy('date', 'desc')
-            ->with(['schedule.course', 'schedule.group'])
-            ->take(10)
-            ->get();
+        $recentAttendance = collect();
+        try {
+            if (Schema::hasTable('student_attendances') && 
+                Schema::hasColumn('student_attendances', 'teacher_id') && 
+                Schema::hasColumn('student_attendances', 'schedule_id') && 
+                Schema::hasColumn('student_attendances', 'date') && 
+                Schema::hasColumn('student_attendances', 'status')) {
+                
+                $recentAttendance = StudentAttendance::where('teacher_id', $user->id)
+                    ->select(\DB::raw('MIN(id) as id, schedule_id, date, COUNT(CASE WHEN status = "present" THEN 1 END) as present_count, COUNT(CASE WHEN status = "absent" THEN 1 END) as absent_count'))
+                    ->groupBy('schedule_id', 'date')
+                    ->orderBy('date', 'desc')
+                    ->with(['schedule.course', 'schedule.group'])
+                    ->take(10)
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching student attendance records: ' . $e->getMessage());
+        }
 
         // Recent messages received by the teacher
-        $recentMessages = \DB::table('messages')
-            ->join('users', 'messages.sender_id', '=', 'users.id')
-            ->select('messages.*', 'users.name as sender_name')
-            ->where('messages.receiver_id', $user->id)
-            ->orderBy('messages.created_at', 'desc')
-            ->take(5)
-            ->get();
+        $recentMessages = collect();
+        try {
+            if (Schema::hasTable('messages') && 
+                Schema::hasColumn('messages', 'sender_id') && 
+                Schema::hasColumn('messages', 'receiver_id') && 
+                Schema::hasColumn('messages', 'created_at')) {
+                
+                $recentMessages = \DB::table('messages')
+                    ->join('users', 'messages.sender_id', '=', 'users.id')
+                    ->select('messages.*', 'users.name as sender_name')
+                    ->where('messages.receiver_id', $user->id)
+                    ->orderBy('messages.created_at', 'desc')
+                    ->take(5)
+                    ->get();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error fetching teacher messages: ' . $e->getMessage());
+        }
 
         // Teacher's attendance status today
         $attendanceStatus = null;
-        $todayAttendance = TeacherAttendance::where('teacher_id', $user->id)
-            ->whereDate('attendance_date', $today)
-            ->first();
-        
-        if ($todayAttendance) {
-            $attendanceStatus = $todayAttendance->status;
+        try {
+            if (Schema::hasColumn('teacher_attendances', 'teacher_id') && 
+                Schema::hasColumn('teacher_attendances', 'attendance_date') &&
+                Schema::hasColumn('teacher_attendances', 'status')) {
+                
+                $todayAttendance = TeacherAttendance::where('teacher_id', $user->id)
+                    ->whereDate('attendance_date', $today)
+                    ->first();
+                
+                if ($todayAttendance) {
+                    $attendanceStatus = $todayAttendance->status;
+                }
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error getting teacher attendance status: ' . $e->getMessage());
         }
 
         // Courses with group count for display
@@ -255,11 +355,11 @@ class DashboardController extends Controller
         }
 
         // Check if there are new messages
-        if ($stats['unreadMessages'] > 0) {
+        if (isset($stats['unreadMessages']) && $stats['unreadMessages'] > 0) {
             $notifications[] = [
                 'type' => 'message',
-                'message' => 'لديك ' . $stats['unreadMessages'] . ' رسائل جديدة غير مقروءة',
-                'date' => Carbon::now()->subHours(2),
+                'message' => 'لديك ' . $stats['unreadMessages'] . ' رسالة جديدة',
+                'date' => Carbon::now()->subHours(4),
                 'link' => route('teacher.messages')
             ];
         }
