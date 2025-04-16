@@ -38,14 +38,28 @@
                     <form method="POST" action="{{ route('admin.attendance.store') }}">
                         @csrf
                         <div class="mb-3">
-                            <label for="teacher_id" class="form-label">اسم الدكتور <span class="text-danger">*</span></label>
-                            <select class="form-select @error('teacher_id') is-invalid @enderror" id="teacher_id" name="teacher_id" required>
-                                <option value="" selected disabled>-- اختر الدكتور --</option>
+                            <label for="user_type" class="form-label">نوع المستخدم <span class="text-danger">*</span></label>
+                            <select class="form-select @error('user_type') is-invalid @enderror" id="user_type" name="user_type" required>
+                                <option value="teacher" {{ old('user_type') == 'teacher' ? 'selected' : '' }}>معلم</option>
+                                <option value="student" {{ old('user_type') == 'student' ? 'selected' : '' }}>طالب</option>
+                            </select>
+                            @error('user_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+                        
+                        <div class="mb-3 teacher-select">
+                            <label for="user_id" class="form-label">اسم المستخدم <span class="text-danger">*</span></label>
+                            <select class="form-select @error('user_id') is-invalid @enderror" id="user_id" name="user_id" required>
+                                <option value="" selected disabled>-- اختر المستخدم --</option>
                                 @foreach($teachers as $teacher)
-                                    <option value="{{ $teacher->id }}" {{ old('teacher_id') == $teacher->id ? 'selected' : '' }}>{{ $teacher->name }}</option>
+                                    <option value="{{ $teacher->id }}" data-type="teacher" {{ old('user_id') == $teacher->id ? 'selected' : '' }}>{{ $teacher->name }}</option>
+                                @endforeach
+                                @foreach($students as $student)
+                                    <option value="{{ $student->id }}" data-type="student" style="display: none;" {{ old('user_id') == $student->id ? 'selected' : '' }}>{{ $student->name }}</option>
                                 @endforeach
                             </select>
-                            @error('teacher_id')
+                            @error('user_id')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
@@ -90,23 +104,28 @@
         <!-- جدول سجل الحضور -->
         <div class="col-md-8 mb-4">
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0">
-                        <i class="fas fa-calendar-alt me-2 text-primary"></i>سجل الحضور
+                        <i class="fas fa-calendar-alt me-2 text-primary"></i>سجل الحضور الشامل (المعلمين والطلاب)
                     </h5>
-                    
-                    <div class="d-flex gap-2">
-                        <form method="GET" action="{{ route('admin.attendance') }}" class="d-flex gap-2">
-                            <input type="date" class="form-control form-control-sm" name="date" value="{{ request('date', now()->format('Y-m-d')) }}">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">
-                                <i class="fas fa-filter me-1"></i> تصفية حسب التاريخ
+                </div>
+                
+                <!-- فلاتر البحث -->
+                <div class="card-body border-bottom">
+                    <form method="GET" action="{{ route('admin.attendance') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="date" class="form-label">تاريخ الحضور</label>
+                            <input type="date" class="form-control" id="date" name="date" value="{{ $date ?? now()->format('Y-m-d') }}">
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i> تصفية
                             </button>
-                        </form>
-                        
-                        <a href="{{ route('admin.attendance') }}" class="btn btn-sm btn-outline-primary">
-                            <i class="fas fa-sync-alt me-1"></i> عرض الكل
-                        </a>
-                    </div>
+                            <a href="{{ route('admin.attendance') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-sync-alt me-1"></i> إعادة ضبط
+                            </a>
+                        </div>
+                    </form>
                 </div>
                 
                 <div class="card-body p-0">
@@ -115,9 +134,11 @@
                             <table class="table table-hover mb-0">
                                 <thead class="bg-light">
                                     <tr>
-                                        <th scope="col">اسم الدكتور</th>
+                                        <th scope="col">اسم المستخدم</th>
+                                        <th scope="col">النوع</th>
                                         <th scope="col">تاريخ الحضور</th>
                                         <th scope="col">الحالة</th>
+                                        <th scope="col">المصدر</th>
                                         <th scope="col">الملاحظات</th>
                                         <th scope="col">الإجراءات</th>
                                     </tr>
@@ -125,21 +146,45 @@
                                 <tbody>
                                     @foreach($attendances as $attendance)
                                         <tr>
-                                            <td>{{ $attendance->teacher->name }}</td>
-                                            <td>{{ $attendance->attendance_date->format('Y-m-d') }}</td>
+                                            <td>{{ $attendance['user']->name }}</td>
                                             <td>
-                                                @if($attendance->status == 'present')
+                                                @if($attendance['type'] == 'teacher')
+                                                    <span class="badge bg-primary">معلم</span>
+                                                @else
+                                                    <span class="badge bg-info">طالب</span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $attendance['attendance_date']->format('Y-m-d') }}</td>
+                                            <td>
+                                                @if($attendance['status'] == 'present')
                                                     <span class="badge bg-success">حاضر</span>
-                                                @elseif($attendance->status == 'absent')
+                                                @elseif($attendance['status'] == 'absent')
                                                     <span class="badge bg-danger">غائب</span>
                                                 @endif
                                             </td>
-                                            <td>{{ $attendance->notes ?: '-' }}</td>
+                                            <td>
+                                                @if(isset($attendance['source']) && $attendance['source'] == 'location')
+                                                    <span class="badge bg-secondary">
+                                                        <i class="fas fa-map-marker-alt me-1"></i> تسجيل مكاني
+                                                    </span>
+                                                @else
+                                                    <span class="badge bg-light text-dark">
+                                                        <i class="fas fa-user-edit me-1"></i> تسجيل يدوي
+                                                    </span>
+                                                @endif
+                                            </td>
+                                            <td>{{ $attendance['notes'] ?: '-' }}</td>
                                             <td>
                                                 <div class="btn-group" role="group">
-                                                    <a href="{{ route('admin.attendance.edit', $attendance) }}" class="btn btn-sm btn-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                    </a>
+                                                    @if(!isset($attendance['source']) || $attendance['source'] != 'location')
+                                                        <a href="{{ route('admin.attendance.edit', $attendance['id']) }}" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    @else
+                                                        <button class="btn btn-sm btn-secondary" disabled title="لا يمكن تعديل سجلات الحضور المكاني">
+                                                            <i class="fas fa-lock"></i>
+                                                        </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
@@ -161,4 +206,33 @@
         </div>
     </div>
 </div>
+
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const userTypeSelect = document.getElementById('user_type');
+        const userIdSelect = document.getElementById('user_id');
+        const userOptions = userIdSelect.querySelectorAll('option[data-type]');
+        
+        // تحديث قائمة المستخدمين عند تغيير نوع المستخدم
+        userTypeSelect.addEventListener('change', function() {
+            const selectedType = this.value;
+            
+            userOptions.forEach(option => {
+                if (option.getAttribute('data-type') === selectedType) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+            
+            userIdSelect.value = '';
+        });
+        
+        // تشغيل الدالة عند تحميل الصفحة
+        userTypeSelect.dispatchEvent(new Event('change'));
+    });
+</script>
+@endpush
+
 @endsection 

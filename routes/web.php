@@ -11,6 +11,7 @@ use App\Http\Controllers\GradeController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\AdminExamController;
 use App\Http\Controllers\LocationAttendanceController;
+use App\Http\Controllers\Admin\LocationAttendanceController as AdminLocationAttendanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -115,6 +116,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/exams/reports/{id}', [AdminExamController::class, 'showReport'])->name('admin.exams.reports.show');
         Route::get('/admin/exams/report/detail/{id}', [AdminExamController::class, 'reportDetail'])->name('admin.exams.report.detail');
         Route::delete('/admin/exams/{id}', [AdminExamController::class, 'destroy'])->name('admin.exams.destroy');
+
+        // مسارات إدارة الحضور المكاني للمشرف
+        Route::get('/admin/location-attendance', [AdminLocationAttendanceController::class, 'index'])->name('admin.location-attendance');
+        Route::get('/admin/location-attendance/user/{userId}', [AdminLocationAttendanceController::class, 'userDetails'])->name('admin.location-attendance.user');
+        Route::get('/admin/location-attendance/location/{locationId}', [AdminLocationAttendanceController::class, 'locationDetails'])->name('admin.location-attendance.location');
     });
     
     // Schedule view routes - accessible by students

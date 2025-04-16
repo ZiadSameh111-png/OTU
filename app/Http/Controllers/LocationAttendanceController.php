@@ -90,16 +90,25 @@ class LocationAttendanceController extends Controller
     /**
      * عرض سجلات الحضور
      */
-    public function history()
+    public function history(Request $request)
     {
         $user = Auth::user();
-        $attendances = LocationAttendance::with('locationSetting')
-            ->where('user_id', $user->id)
-            ->orderBy('attendance_date', 'desc')
-            ->orderBy('attendance_time', 'desc')
-            ->paginate(20);
+        $date = $request->date ? $request->date : now()->toDateString();
         
-        return view('attendance.location.history', compact('attendances'));
+        $query = LocationAttendance::with('locationSetting')
+            ->where('user_id', $user->id);
+            
+        // تطبيق فلتر التاريخ إذا تم تحديده
+        if ($request->has('date')) {
+            $query->whereDate('attendance_date', $date);
+        }
+        
+        $attendanceRecords = $query->orderBy('attendance_date', 'desc')
+            ->orderBy('attendance_time', 'desc')
+            ->paginate(20)
+            ->appends($request->query());
+        
+        return view('attendance.location.history', compact('attendanceRecords', 'date'));
     }
     
     /**

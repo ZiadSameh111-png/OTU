@@ -18,9 +18,10 @@ class StudentAttendance extends Model
         'schedule_id',
         'student_id',
         'teacher_id',
-        'date',
+        'attendance_date',
         'status',
         'notes',
+        'recorded_by',
     ];
 
     /**
@@ -29,7 +30,7 @@ class StudentAttendance extends Model
      * @var array
      */
     protected $casts = [
-        'date' => 'date',
+        'attendance_date' => 'date',
     ];
 
     /**
@@ -54,5 +55,13 @@ class StudentAttendance extends Model
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    /**
+     * Get the user who recorded the attendance.
+     */
+    public function recorder()
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }
