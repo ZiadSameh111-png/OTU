@@ -671,22 +671,14 @@ class ExamController extends Controller
             $attempt->save();
         }
         
-        // Check if the exam has ended
-        if ($exam->hasEnded()) {
-            $this->submitExam($id); // Auto-submit the exam
-            return redirect()->route('student.exams.index')
-                ->with('warning', 'انتهى وقت الاختبار وتم تقديم إجاباتك تلقائياً');
-        }
-        
-        // Check only if the *exam duration* has run out from the student's attempt, 
-        // but the exam end time hasn't been reached
-        if ($attempt->timeRemaining() <= 0) {
+        // Check if student's attempt time has expired (based only on duration)
+        if ($attempt->timeRemaining(false) <= 0) {
             // تم انتهاء وقت المحاولة، نقوم بتسليم الاختبار
             $this->submitExam($id);
             return redirect()->route('student.exams.index')
                 ->with('warning', 'انتهى وقت الاختبار وتم تقديم إجاباتك تلقائياً');
         } else {
-            $timeRemaining = $attempt->timeRemaining();
+            $timeRemaining = $attempt->timeRemaining(false);
         }
         
         // Get the student's answers for this exam
@@ -708,48 +700,101 @@ class ExamController extends Controller
      */
     public function saveAnswer(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'exam_id' => 'required|exists:exams,id',
-            'question_id' => 'required|exists:exam_questions,id',
-            'answer' => 'required',
-        ]);
-        
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()], 400);
-        }
-        
-        $student = Auth::user();
-        $examId = $request->exam_id;
-        $questionId = $request->question_id;
-        $answer = $request->answer;
-        
-        // Get the student's attempt
-        $attempt = StudentExamAttempt::where('student_id', $student->id)
-            ->where('exam_id', $examId)
-            ->first();
-        
-        // If no attempt exists or it's already submitted/graded, return error
-        if (!$attempt || in_array($attempt->status, ['submitted', 'graded'])) {
-            return response()->json(['error' => 'لا يمكنك تقديم إجابات لهذا الاختبار'], 400);
-        }
-        
-        // Save or update the answer
-        $examAnswer = StudentExamAnswer::updateOrCreate(
-            [
+        try {
+            \Log::info('Saving answer request received', $request->all());
+            
+            $validator = Validator::make($request->all(), [
+                'exam_id' => 'required|exists:exams,id',
+                'question_id' => 'required|exists:exam_questions,id',
+                'answer' => 'required',
+            ]);
+            
+            if ($validator->fails()) {
+                \Log::error('Validation failed for saveAnswer', ['errors' => $validator->errors()]);
+                return response()->json(['success' => false, 'error' => $validator->errors()], 400);
+            }
+            
+            $student = Auth::user();
+            $examId = $request->exam_id;
+            $questionId = $request->question_id;
+            $answer = $request->answer;
+            
+            // Get the student's attempt
+            $attempt = StudentExamAttempt::where('student_id', $student->id)
+                ->where('exam_id', $examId)
+                ->first();
+            
+            // If no attempt exists or it's already submitted/graded, return error
+            if (!$attempt) {
+                \Log::error('No active attempt found', ['student_id' => $student->id, 'exam_id' => $examId]);
+                return response()->json(['success' => false, 'error' => 'لا يوجد محاولة نشطة لهذا الاختبار'], 400);
+            }
+            
+            if (in_array($attempt->status, ['submitted', 'graded'])) {
+                \Log::error('Attempt already submitted', ['attempt_id' => $attempt->id, 'status' => $attempt->status]);
+                return response()->json(['success' => false, 'error' => 'تم تسليم هذه المحاولة مسبقاً'], 400);
+            }
+            
+            \Log::info('Saving answer', [
                 'student_id' => $student->id,
                 'exam_id' => $examId,
                 'question_id' => $questionId,
-            ],
-            [
-                'answer' => $answer,
-                'submitted_at' => Carbon::now(),
-            ]
-        );
-        
-        // Auto-evaluate the answer if applicable
-        $examAnswer->evaluateAnswer();
-        
-        return response()->json(['success' => true]);
+                'answer' => $answer
+            ]);
+            
+            // Save or update the answer with explicit values for all required fields
+            $examAnswer = StudentExamAnswer::updateOrCreate(
+                [
+                    'student_id' => $student->id,
+                    'exam_id' => $examId,
+                    'question_id' => $questionId,
+                ],
+                [
+                    'answer' => $answer,
+                    'submitted_at' => Carbon::now(),
+                ]
+            );
+            
+            // Verify the answer was saved
+            $savedAnswer = StudentExamAnswer::where('student_id', $student->id)
+                ->where('exam_id', $examId)
+                ->where('question_id', $questionId)
+                ->first();
+                
+            if (!$savedAnswer) {
+                \Log::error('Failed to verify saved answer', [
+                    'student_id' => $student->id,
+                    'exam_id' => $examId,
+                    'question_id' => $questionId
+                ]);
+                return response()->json(['success' => false, 'error' => 'فشل في حفظ الإجابة'], 500);
+            }
+            
+            // Auto-evaluate the answer if applicable
+            if ($examAnswer) {
+                $examAnswer->evaluateAnswer();
+            }
+            
+            \Log::info('Answer saved successfully', ['answer_id' => $examAnswer->id]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حفظ الإجابة بنجاح',
+                'answer_id' => $examAnswer->id,
+                'time' => Carbon::now()->format('Y-m-d H:i:s')
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Exception in saveAnswer', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'حدث خطأ أثناء حفظ الإجابة: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -769,7 +814,7 @@ class ExamController extends Controller
             ->first();
         
         // If no attempt exists or it's already submitted/graded, redirect back
-        if (!$attempt || in_array($attempt->status, ['submitted', 'graded'])) {
+        if (!$attempt || in_array($attempt->status, ['pending_review', 'submitted', 'graded'])) {
             return redirect()->route('student.exams.index')
                 ->with('error', 'لا يمكنك تقديم هذا الاختبار');
         }
@@ -778,7 +823,7 @@ class ExamController extends Controller
         $attempt->markAsSubmitted();
         
         return redirect()->route('student.exams.index')
-            ->with('success', 'تم تقديم الاختبار بنجاح');
+            ->with('success', 'تم تقديم الاختبار بنجاح. سيقوم المدرس بمراجعة إجاباتك وتأكيد الدرجة');
     }
 
     /**
@@ -797,10 +842,10 @@ class ExamController extends Controller
             ->where('exam_id', $exam->id)
             ->first();
         
-        // If no attempt exists or it's not submitted/graded, redirect back
-        if (!$attempt || !in_array($attempt->status, ['submitted', 'graded'])) {
+        // If no attempt exists or it's not graded, redirect back
+        if (!$attempt || $attempt->status != 'graded') {
             return redirect()->route('student.exams.results')
-                ->with('error', 'لا يمكنك عرض نتائج هذا الاختبار');
+                ->with('error', 'لا يمكنك عرض نتائج هذا الاختبار حتى يتم تصحيحه من قبل المدرس');
         }
         
         // Get the student's answers for this exam
@@ -828,21 +873,30 @@ class ExamController extends Controller
                 Schema::hasColumn('student_exam_attempts', 'status') &&
                 Schema::hasColumn('student_exam_attempts', 'submit_time')) {
                 
-                // Get all submitted attempts for the student
+                // Get all attempts for the student
                 $attempts = StudentExamAttempt::where('student_id', $student->id)
-                    ->whereIn('status', ['submitted', 'graded'])
+                    ->whereIn('status', ['pending_review', 'submitted', 'graded'])
                     ->with(['exam', 'exam.course'])
                     ->orderBy('submit_time', 'desc')
                     ->get();
+                
+                // Get graded attempts
+                $gradedAttempts = $attempts->where('status', 'graded');
+                
+                // Get pending attempts (pending_review or submitted but not graded)
+                $pendingAttempts = $attempts->whereIn('status', ['pending_review', 'submitted'])
+                                           ->where('is_graded', false);
             } else {
-                $attempts = collect();
+                $gradedAttempts = collect();
+                $pendingAttempts = collect();
             }
         } catch (\Exception $e) {
             \Log::error('Error fetching student exam attempts: ' . $e->getMessage());
-            $attempts = collect();
+            $gradedAttempts = collect();
+            $pendingAttempts = collect();
         }
         
-        return view('student.exams.results-index', compact('attempts'));
+        return view('student.exams.results-index', compact('gradedAttempts', 'pendingAttempts'));
     }
 
     /**
@@ -863,7 +917,7 @@ class ExamController extends Controller
             ->whereHas('exam', function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id);
             })
-            ->where('status', 'submitted');
+            ->whereIn('status', ['pending_review', 'submitted']);
             
         if ($courseId) {
             $query->whereHas('exam', function ($q) use ($courseId) {
@@ -873,10 +927,16 @@ class ExamController extends Controller
             
         if ($status !== 'all') {
             if ($status === 'pending') {
-                $query->where('is_graded', false)
-                    ->whereHas('exam.questions', function ($q) {
-                        $q->where('question_type', 'open_ended');
-                    });
+                $query->where(function($q) {
+                    $q->where('status', 'pending_review')
+                        ->orWhere(function($q2) {
+                            $q2->where('status', 'submitted')
+                              ->where('is_graded', false)
+                              ->whereHas('exam.questions', function ($q3) {
+                                  $q3->where('question_type', 'open_ended');
+                              });
+                        });
+                });
             } elseif ($status === 'in_progress') {
                 $query->where('is_graded', false)
                     ->whereHas('answers', function ($q) {
@@ -894,17 +954,22 @@ class ExamController extends Controller
             'pending' => StudentExamAttempt::whereHas('exam', function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id);
             })
-            ->where('status', 'submitted')
-            ->where('is_graded', false)
-            ->whereHas('exam.questions', function ($q) {
-                $q->where('question_type', 'open_ended');
+            ->where(function($q) {
+                $q->where('status', 'pending_review')
+                  ->orWhere(function($q2) {
+                      $q2->where('status', 'submitted')
+                        ->where('is_graded', false)
+                        ->whereHas('exam.questions', function ($q3) {
+                            $q3->where('question_type', 'open_ended');
+                        });
+                  });
             })
             ->count(),
             
             'in_progress' => StudentExamAttempt::whereHas('exam', function ($q) use ($teacher) {
                 $q->where('teacher_id', $teacher->id);
             })
-            ->where('status', 'submitted')
+            ->whereIn('status', ['pending_review', 'submitted'])
             ->where('is_graded', false)
             ->whereHas('answers', function ($q) {
                 $q->whereNotNull('marks_obtained');
@@ -940,7 +1005,7 @@ class ExamController extends Controller
         
         // Get all submitted attempts for this exam
         $attempts = StudentExamAttempt::where('exam_id', $id)
-            ->whereIn('status', ['submitted', 'graded'])
+            ->whereIn('status', ['pending_review', 'submitted', 'graded'])
             ->with(['student', 'student.group'])
             ->orderBy('submit_time', 'asc')
             ->get();
@@ -972,7 +1037,7 @@ class ExamController extends Controller
         // Get the student's attempt
         $attempt = StudentExamAttempt::where('student_id', $studentId)
             ->where('exam_id', $examId)
-            ->whereIn('status', ['submitted', 'graded'])
+            ->whereIn('status', ['pending_review', 'submitted', 'graded'])
             ->firstOrFail();
         
         // Get the student's answers for open-ended questions
@@ -1008,7 +1073,7 @@ class ExamController extends Controller
         // Get the student's attempt
         $attempt = StudentExamAttempt::where('student_id', $studentId)
             ->where('exam_id', $examId)
-            ->whereIn('status', ['submitted', 'graded'])
+            ->whereIn('status', ['pending_review', 'submitted', 'graded'])
             ->firstOrFail();
         
         // Validate and save grades for each answer
@@ -1382,5 +1447,66 @@ class ExamController extends Controller
         
         return redirect()->route('teacher.exams.index')
             ->with('success', 'تم إغلاق الاختبار بنجاح');
+    }
+
+    /**
+     * Check if an answer is saved in the database.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function checkAnswer(Request $request)
+    {
+        try {
+            \Log::info('Check answer request', $request->all());
+            
+            $validator = Validator::make($request->all(), [
+                'exam_id' => 'required|exists:exams,id',
+                'question_id' => 'required|exists:exam_questions,id',
+            ]);
+            
+            if ($validator->fails()) {
+                \Log::error('Validation failed for checkAnswer', ['errors' => $validator->errors()]);
+                return response()->json(['success' => false, 'error' => $validator->errors()], 400);
+            }
+            
+            $student = Auth::user();
+            $examId = $request->exam_id;
+            $questionId = $request->question_id;
+            
+            // Check if the answer exists
+            $answer = StudentExamAnswer::where('student_id', $student->id)
+                ->where('exam_id', $examId)
+                ->where('question_id', $questionId)
+                ->first();
+            
+            \Log::info('Check answer result', [
+                'student_id' => $student->id,
+                'exam_id' => $examId,
+                'question_id' => $questionId,
+                'found' => (bool)$answer
+            ]);
+            
+            if ($answer) {
+                return response()->json([
+                    'success' => true,
+                    'answer' => $answer->answer,
+                    'time' => $answer->submitted_at->format('Y-m-d H:i:s')
+                ]);
+            }
+            
+            return response()->json(['success' => false, 'message' => 'لم يتم العثور على إجابة']);
+            
+        } catch (\Exception $e) {
+            \Log::error('Exception in checkAnswer', [
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'error' => 'حدث خطأ أثناء التحقق من الإجابة: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

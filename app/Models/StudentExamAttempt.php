@@ -154,13 +154,13 @@ class StudentExamAttempt extends Model
     }
 
     /**
-     * Check if the attempt is finished (either submitted or timed out).
+     * Check if the attempt is finished.
      *
      * @return bool
      */
     public function isFinished()
     {
-        return in_array($this->status, ['submitted', 'graded']) || $this->timeRemaining() <= 0;
+        return in_array($this->status, ['pending_review', 'submitted', 'graded']) || $this->timeRemaining(false) <= 0;
     }
 
     /**
@@ -184,7 +184,7 @@ class StudentExamAttempt extends Model
      */
     public function markAsSubmitted()
     {
-        $this->status = 'submitted';
+        $this->status = 'pending_review';
         $this->submit_time = Carbon::now();
         
         // Calculate total marks for automatically graded questions

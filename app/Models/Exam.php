@@ -115,8 +115,8 @@ class Exam extends Model
      */
     public function notStartedYet()
     {
-        // الاختبار لم يبدأ بعد إذا كان منشور وغير مفتوح (غير نشط)
-        return $this->is_published && !$this->is_open;
+        // الاختبار لم يبدأ بعد إذا كان غير منشور
+        return !$this->is_published;
     }
 
     /**

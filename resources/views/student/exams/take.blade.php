@@ -37,6 +37,25 @@
         border-color: #007bff;
         background-color: #f0f8ff;
     }
+    .save-status {
+        transition: all 0.3s ease;
+    }
+    .save-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-left: 5px;
+    }
+    .saving {
+        background-color: #ffc107;
+    }
+    .saved {
+        background-color: #28a745;
+    }
+    .save-error {
+        background-color: #dc3545;
+    }
 </style>
 @endsection
 
@@ -85,7 +104,7 @@
             <div id="questions-container">
                 @foreach($questions as $index => $question)
                     <div class="question-card card shadow-sm border-0 mb-4 {{ $index > 0 ? 'd-none' : '' }}" data-question-id="{{ $question->id }}" data-question-index="{{ $index }}">
-                        <div class="card-header bg-light">
+                        <div class="card-header bg-dark text-white">
                             <h6 class="mb-0 fw-bold">
                                 <span class="badge bg-primary me-2">{{ $index + 1 }}/{{ count($questions) }}</span>
                                 {{ $question->question_text }}
@@ -134,16 +153,13 @@
                                 @endif
                                 
                                 <div class="alert alert-success save-status d-none">
-                                    <i class="fas fa-check-circle me-1"></i> تم حفظ إجابتك بنجاح
+                                    <i class="fas fa-check-circle me-1"></i> <span class="save-status-text">تم حفظ إجابتك بنجاح</span>
+                                    <span class="save-indicator"></span>
                                 </div>
                                 
                                 <div class="d-flex justify-content-between mt-4">
                                     <button type="button" class="btn btn-outline-secondary prev-question-btn" {{ $index == 0 ? 'disabled' : '' }}>
                                         <i class="fas fa-arrow-right me-1"></i> السؤال السابق
-                                    </button>
-                                    
-                                    <button type="button" class="btn btn-outline-primary save-answer-btn">
-                                        <i class="fas fa-save me-1"></i> حفظ الإجابة
                                     </button>
                                     
                                     @if($index < count($questions) - 1)
@@ -193,7 +209,7 @@
                         @foreach($questions as $index => $question)
                             <div class="col-3">
                                 <button type="button" class="btn btn-sm w-100 question-nav-btn {{ isset($answers[$question->id]) ? 'btn-success' : 'btn-outline-secondary' }}" 
-                                    data-target-index="{{ $index }}">
+                                    data-target-index="{{ $index }}" data-question-id="{{ $question->id }}">
                                     {{ $index + 1 }}
                                 </button>
                             </div>
@@ -254,31 +270,24 @@
                 
                 <p class="text-danger fw-bold mb-0">أسئلة لم تتم الإجابة عليها:</p>
                 <div id="unanswered-questions-list">
-                    @php
-                        $unansweredCount = 0;
-                    @endphp
-                    
-                    @foreach($questions as $index => $question)
-                        @if(!isset($answers[$question->id]))
-                            <div class="badge bg-danger m-1">السؤال {{ $index + 1 }}</div>
-                            @php $unansweredCount++; @endphp
-                        @endif
-                    @endforeach
-                    
-                    @if($unansweredCount == 0)
-                        <p class="text-success mt-2">
-                            <i class="fas fa-check-circle me-1"></i> لقد أجبت على جميع الأسئلة
-                        </p>
-                    @endif
+                    <!-- Will be filled by JavaScript -->
+                </div>
+                
+                <div id="submission-loader" class="text-center mt-3 d-none">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري الحفظ...</span>
+                    </div>
+                    <p class="mt-2 mb-0">جاري حفظ إجاباتك وتجهيز الاختبار للتسليم...</p>
+                    <p id="submission-status" class="mt-2"></p>
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i> العودة للاختبار
                 </button>
-                <form action="{{ route('student.exams.submit', $exam->id) }}" method="POST">
+                <form action="{{ route('student.exams.submit', $exam->id) }}" method="POST" id="submitExamForm">
                     @csrf
-                    <button type="submit" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" id="finalSubmitBtn">
                         <i class="fas fa-paper-plane me-1"></i> تسليم الاختبار
                     </button>
                 </form>
@@ -291,6 +300,11 @@
 @section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Globals
+        const answersCache = new Map();
+        const savedStatus = new Map();
+        let isSubmitting = false;
+        
         // Timer setup
         const timerDisplay = document.getElementById('timer');
         const progressBar = document.getElementById('progress-bar');
@@ -318,7 +332,7 @@
                 // Auto-submit the exam
                 setTimeout(() => {
                     alert('انتهى وقت الاختبار! سيتم تسليم إجاباتك تلقائيًا.');
-                    document.querySelector('#submitExamModal form').submit();
+                    submitAllAnswers();
                 }, 1000);
                 
                 return;
@@ -369,6 +383,12 @@
                 const currentIndex = parseInt(currentCard.getAttribute('data-question-index'));
                 const nextIndex = currentIndex + 1;
                 
+                // Save current answer if any
+                const form = currentCard.querySelector('form');
+                if (form) {
+                    saveAnswer(form);
+                }
+                
                 if (nextIndex < questionCards.length) {
                     currentCard.classList.add('d-none');
                     questionCards[nextIndex].classList.remove('d-none');
@@ -382,6 +402,12 @@
                 const currentIndex = parseInt(currentCard.getAttribute('data-question-index'));
                 const prevIndex = currentIndex - 1;
                 
+                // Save current answer if any
+                const form = currentCard.querySelector('form');
+                if (form) {
+                    saveAnswer(form);
+                }
+                
                 if (prevIndex >= 0) {
                     currentCard.classList.add('d-none');
                     questionCards[prevIndex].classList.remove('d-none');
@@ -389,28 +415,82 @@
             });
         });
         
-        // Save answers
-        const saveButtons = document.querySelectorAll('.save-answer-btn');
-        const answeredCount = document.getElementById('answered-count');
-        const answeredProgress = document.getElementById('answered-progress');
-        const unansweredList = document.getElementById('unanswered-questions-list');
+        // Function to update UI status
+        function updateSaveStatus(form, status, message) {
+            const statusAlert = form.querySelector('.save-status');
+            const statusText = statusAlert.querySelector('.save-status-text');
+            const indicator = statusAlert.querySelector('.save-indicator');
+            
+            statusAlert.classList.remove('d-none', 'alert-success', 'alert-warning', 'alert-danger');
+            indicator.classList.remove('saving', 'saved', 'save-error');
+            
+            switch(status) {
+                case 'saving':
+                    statusAlert.classList.add('alert-warning');
+                    indicator.classList.add('saving');
+                    statusAlert.classList.remove('d-none');
+                    break;
+                case 'saved':
+                    statusAlert.classList.add('alert-success');
+                    indicator.classList.add('saved');
+                    statusAlert.classList.remove('d-none');
+                    // Hide after 3 seconds
+                    setTimeout(() => statusAlert.classList.add('d-none'), 3000);
+                    break;
+                case 'error':
+                    statusAlert.classList.add('alert-danger');
+                    indicator.classList.add('save-error');
+                    statusAlert.classList.remove('d-none');
+                    break;
+                default:
+                    statusAlert.classList.add('d-none');
+            }
+            
+            if (message) {
+                statusText.textContent = message;
+            }
+        }
         
-        saveButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const form = this.closest('form');
-                const questionId = form.getAttribute('data-question-id');
-                const formData = new FormData(form);
-                const statusAlert = form.querySelector('.save-status');
-                const navBtn = document.querySelectorAll(`.question-nav-btn[data-target-index="${form.closest('.question-card').getAttribute('data-question-index')}"]`);
-                
-                // Check if an answer is provided
-                const answer = formData.get('answer');
-                if (!answer) {
-                    alert('يرجى اختيار إجابة قبل الحفظ');
-                    return;
-                }
-                
-                // Send the answer via AJAX
+        // Function to save answers with verification
+        function saveAnswer(form, callback = null) {
+            const questionId = form.getAttribute('data-question-id');
+            const formData = new FormData(form);
+            const answer = formData.get('answer');
+            const index = parseInt(form.closest('.question-card').getAttribute('data-question-index'));
+            
+            // Skip if no answer or if already saving
+            if (!answer || savedStatus.get(questionId) === 'saving') {
+                if (callback) callback(false);
+                return;
+            }
+            
+            // Skip if answer hasn't changed
+            if (answersCache.get(questionId) === answer && savedStatus.get(questionId) === 'saved') {
+                if (callback) callback(true);
+                return;
+            }
+            
+            // Update cache
+            answersCache.set(questionId, answer);
+            savedStatus.set(questionId, 'saving');
+            
+            // Update UI - show saving
+            updateSaveStatus(form, 'saving', 'جاري حفظ إجابتك...');
+            
+            // Update navigation button status immediately for better UX
+            updateQuestionNavButton(index, true);
+            
+            // Add question ID to form data explicitly
+            formData.set('question_id', questionId);
+            formData.set('exam_id', '{{ $exam->id }}');
+            
+            console.log(`Saving answer for question ${questionId}: ${answer}`);
+            
+            // Send the answer via AJAX with retry logic
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            function attemptSave() {
                 fetch('{{ route("student.exams.save-answer") }}', {
                     method: 'POST',
                     body: formData,
@@ -421,41 +501,110 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Show success message
-                        statusAlert.textContent = 'تم حفظ إجابتك بنجاح';
-                        statusAlert.classList.remove('d-none');
-                        setTimeout(() => statusAlert.classList.add('d-none'), 2000);
+                        savedStatus.set(questionId, 'saved');
+                        updateSaveStatus(form, 'saved', 'تم حفظ إجابتك بنجاح');
+                        console.log(`✓ Answer saved for question ${questionId}`);
                         
-                        // Update navigation button status
-                        navBtn.forEach(btn => btn.classList.remove('btn-outline-secondary'));
-                        navBtn.forEach(btn => btn.classList.add('btn-success'));
+                        // Verify the answer was actually saved
+                        verifyAnswer(questionId, index);
                         
-                        // Update answered questions count and progress
-                        const totalAnswered = parseInt(data.answeredCount);
-                        answeredCount.textContent = totalAnswered;
-                        const percent = (totalAnswered / {{ count($questions) }}) * 100;
-                        answeredProgress.style.width = `${percent}%`;
-                        
-                        // Update unanswered questions list
-                        updateUnansweredList();
+                        if (callback) callback(true);
                     } else {
-                        alert('حدث خطأ أثناء حفظ إجابتك. يرجى المحاولة مرة أخرى');
+                        console.error(`Error saving answer: ${data.error || 'Unknown error'}`);
+                        if (retryCount < maxRetries) {
+                            retryCount++;
+                            console.log(`Retry attempt ${retryCount} for question ${questionId}`);
+                            setTimeout(attemptSave, 1000);
+                        } else {
+                            savedStatus.set(questionId, 'error');
+                            updateSaveStatus(form, 'error', 'فشل في حفظ إجابتك. سيتم إعادة المحاولة تلقائيًا.');
+                            
+                            // Auto retry after 3 seconds
+                            setTimeout(() => attemptSave(), 3000);
+                            
+                            if (callback) callback(false);
+                        }
                     }
                 })
                 .catch(error => {
-                    console.error('Error:', error);
-                    alert('حدث خطأ أثناء حفظ إجابتك. يرجى المحاولة مرة أخرى');
+                    console.error(`Network error saving answer: ${error}`);
+                    if (retryCount < maxRetries) {
+                        retryCount++;
+                        console.log(`Retry attempt ${retryCount} for question ${questionId}`);
+                        setTimeout(attemptSave, 1000);
+                    } else {
+                        savedStatus.set(questionId, 'error');
+                        updateSaveStatus(form, 'error', 'فشل في حفظ إجابتك. سيتم إعادة المحاولة تلقائيًا.');
+                        
+                        // Auto retry after 3 seconds
+                        setTimeout(() => attemptSave(), 3000);
+                        
+                        if (callback) callback(false);
+                    }
                 });
+            }
+            
+            attemptSave();
+            
+            // Update UI elements
+            updateUnansweredList();
+        }
+        
+        // Verify if an answer is saved in the database
+        function verifyAnswer(questionId, index) {
+            fetch(`{{ route('student.exams.check-answer') }}?exam_id={{ $exam->id }}&question_id=${questionId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log(`✓ Verified: Answer for question ${questionId} is saved in the database`);
+                    savedStatus.set(questionId, 'saved');
+                    
+                    // Update UI to show it's saved
+                    updateQuestionNavButton(index, true);
+                    
+                    // Update answer count in summary
+                    updateUnansweredList();
+                } else {
+                    console.error(`✗ Error: Answer for question ${questionId} not found in database`);
+                    savedStatus.set(questionId, 'error');
+                    
+                    // Retry saving if verification failed
+                    const form = document.querySelector(`.answer-form[data-question-id="${questionId}"]`);
+                    if (form) {
+                        console.log(`Retrying save for question ${questionId}...`);
+                        saveAnswer(form);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error(`Error verifying answer: ${error}`);
+                // Don't change status on verification error
             });
-        });
+        }
+        
+        // Update question navigation button appearance
+        function updateQuestionNavButton(index, isAnswered) {
+            document.querySelectorAll(`.question-nav-btn[data-target-index="${index}"]`).forEach(btn => {
+                if (isAnswered) {
+                    btn.classList.remove('btn-outline-secondary');
+                    btn.classList.add('btn-success');
+                } else {
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }
+            });
+        }
         
         // Auto-save on radio button change
         document.querySelectorAll('input[type="radio"]').forEach(radio => {
             radio.addEventListener('change', function() {
-                const saveBtn = this.closest('form').querySelector('.save-answer-btn');
-                if (saveBtn) {
-                    saveBtn.click();
-                }
+                const form = this.closest('form');
+                saveAnswer(form);
             });
         });
         
@@ -464,30 +613,50 @@
         document.querySelectorAll('textarea[name="answer"]').forEach(textarea => {
             textarea.addEventListener('input', function() {
                 clearTimeout(textareaTimeout);
-                textareaTimeout = setTimeout(() => {
-                    if (textarea.value.trim().length > 0) {
-                        const saveBtn = this.closest('form').querySelector('.save-answer-btn');
-                        if (saveBtn) {
-                            saveBtn.click();
-                        }
-                    }
-                }, 2000); // 2 seconds delay
+                const form = this.closest('form');
+                
+                if (textarea.value.trim().length > 0) {
+                    // Show saving indicator after typing stops
+                    updateSaveStatus(form, 'saving', 'سيتم حفظ إجابتك تلقائياً...');
+                    
+                    textareaTimeout = setTimeout(() => {
+                        saveAnswer(form);
+                    }, 1000); // 1 second delay
+                }
             });
         });
         
         // Update unanswered questions list
         function updateUnansweredList() {
-            // Collect answered question IDs
+            // Get all forms and check which ones have answers
+            const forms = document.querySelectorAll('.answer-form');
             const answeredQuestions = [];
-            document.querySelectorAll('.question-nav-btn.btn-success').forEach(btn => {
-                answeredQuestions.push(parseInt(btn.getAttribute('data-target-index')));
+            let totalAnswered = 0;
+            
+            forms.forEach((form, index) => {
+                const questionId = form.getAttribute('data-question-id');
+                const answer = answersCache.get(questionId);
+                
+                // Check if this form has an answer
+                if (answer && answer.trim() !== '') {
+                    answeredQuestions.push(index);
+                    totalAnswered++;
+                    
+                    // Update the navigation button to show as answered
+                    updateQuestionNavButton(index, true);
+                }
             });
             
-            // Update the list in the modal
+            // Update the counts in the modal
+            document.getElementById('answered-count').textContent = totalAnswered;
+            const percent = (totalAnswered / {{ count($questions) }}) * 100;
+            document.getElementById('answered-progress').style.width = `${percent}%`;
+            
+            // Update the list of unanswered questions
             let unansweredHTML = '';
             let unansweredCount = 0;
             
-            for (let i = 0; i < {{ count($questions) }}; i++) {
+            for (let i = 0; i < forms.length; i++) {
                 if (!answeredQuestions.includes(i)) {
                     unansweredHTML += `<div class="badge bg-danger m-1">السؤال ${i + 1}</div>`;
                     unansweredCount++;
@@ -498,11 +667,170 @@
                 unansweredHTML = '<p class="text-success mt-2"><i class="fas fa-check-circle me-1"></i> لقد أجبت على جميع الأسئلة</p>';
             }
             
-            unansweredList.innerHTML = unansweredHTML;
+            document.getElementById('unanswered-questions-list').innerHTML = unansweredHTML;
+            
+            return {
+                totalAnswered,
+                unansweredCount
+            };
         }
         
-        // Initial call to setup the page
+        // Submit all answers before final submission
+        async function submitAllAnswers() {
+            if (isSubmitting) return;
+            
+            isSubmitting = true;
+            const submissionLoader = document.getElementById('submission-loader');
+            const submissionStatus = document.getElementById('submission-status');
+            submissionLoader.classList.remove('d-none');
+            
+            // Disable buttons during submission
+            document.getElementById('finalSubmitBtn').disabled = true;
+            document.querySelector('button[data-bs-dismiss="modal"]').disabled = true;
+            
+            console.log('Starting final submission process...');
+            submissionStatus.textContent = 'التحقق من حفظ جميع الإجابات...';
+            
+            // Get all forms with answers
+            const forms = document.querySelectorAll('.answer-form');
+            const pendingSaves = [];
+            
+            forms.forEach(form => {
+                const questionId = form.getAttribute('data-question-id');
+                const formData = new FormData(form);
+                const answer = formData.get('answer');
+                
+                if (answer && answer.trim() !== '') {
+                    const status = savedStatus.get(questionId);
+                    
+                    // Add to pending saves if not saved or in error state
+                    if (status !== 'saved') {
+                        pendingSaves.push({ form, questionId });
+                    }
+                }
+            });
+            
+            // Save all pending answers
+            if (pendingSaves.length > 0) {
+                submissionStatus.textContent = `حفظ ${pendingSaves.length} إجابات متبقية...`;
+                console.log(`Saving ${pendingSaves.length} pending answers...`);
+                
+                for (let i = 0; i < pendingSaves.length; i++) {
+                    const { form, questionId } = pendingSaves[i];
+                    submissionStatus.textContent = `حفظ الإجابة ${i+1} من ${pendingSaves.length}...`;
+                    
+                    await new Promise(resolve => {
+                        saveAnswer(form, (success) => {
+                            console.log(`Answer ${i+1}/${pendingSaves.length} for question ${questionId}: ${success ? 'saved' : 'failed'}`);
+                            setTimeout(resolve, 500); // Short delay between saves
+                        });
+                    });
+                }
+            }
+            
+            // Verify all answers are saved
+            let allSaved = true;
+            
+            forms.forEach(form => {
+                const questionId = form.getAttribute('data-question-id');
+                const formData = new FormData(form);
+                const answer = formData.get('answer');
+                
+                if (answer && answer.trim() !== '') {
+                    const status = savedStatus.get(questionId);
+                    if (status !== 'saved') {
+                        allSaved = false;
+                        console.error(`Answer for question ${questionId} is not confirmed saved!`);
+                    }
+                }
+            });
+            
+            if (!allSaved) {
+                submissionStatus.textContent = 'تحذير: بعض الإجابات قد لا تكون محفوظة. جاري المحاولة مرة أخرى...';
+                console.warn('Some answers may not be saved correctly. Final verification...');
+                
+                // One more check by verifying with the server
+                const verification = [];
+                
+                for (const form of forms) {
+                    const questionId = form.getAttribute('data-question-id');
+                    const formData = new FormData(form);
+                    const answer = formData.get('answer');
+                    
+                    if (answer && answer.trim() !== '') {
+                        verification.push(
+                            fetch(`{{ route('student.exams.check-answer') }}?exam_id={{ $exam->id }}&question_id=${questionId}`, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => ({ questionId, saved: data.success }))
+                            .catch(() => ({ questionId, saved: false }))
+                        );
+                    }
+                }
+                
+                const results = await Promise.all(verification);
+                const notSaved = results.filter(r => !r.saved).map(r => r.questionId);
+                
+                if (notSaved.length > 0) {
+                    submissionStatus.textContent = `إعادة حفظ ${notSaved.length} إجابات...`;
+                    console.warn(`${notSaved.length} answers need to be saved again:`, notSaved);
+                    
+                    // Try one more time to save these answers
+                    for (const qId of notSaved) {
+                        const form = document.querySelector(`.answer-form[data-question-id="${qId}"]`);
+                        if (form) {
+                            await new Promise(resolve => {
+                                saveAnswer(form, () => setTimeout(resolve, 800));
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Final submission
+            submissionStatus.textContent = 'جاري تسليم الاختبار...';
+            console.log('All answers confirmed. Submitting exam...');
+            
+            // Add a short delay to ensure everything is processed
+            setTimeout(() => {
+                document.getElementById('submitExamForm').submit();
+            }, 1000);
+        }
+        
+        // Submit button handling
+        document.getElementById('finalSubmitBtn').addEventListener('click', submitAllAnswers);
+        
+        // Initialize the page
         updateUnansweredList();
+        
+        // Pre-verify answers that are already loaded
+        document.querySelectorAll('.answer-form').forEach(form => {
+            const questionId = form.getAttribute('data-question-id');
+            const index = parseInt(form.closest('.question-card').getAttribute('data-question-index'));
+            
+            // Check if we have form elements with values
+            const formData = new FormData(form);
+            const answer = formData.get('answer');
+            
+            if (answer && answer.trim() !== '') {
+                // Add to cache
+                answersCache.set(questionId, answer);
+                
+                // Verify it's in the database
+                verifyAnswer(questionId, index);
+            }
+        });
+        
+        // When the modal is shown, update the unanswered list
+        const submitExamModal = document.getElementById('submitExamModal');
+        submitExamModal.addEventListener('show.bs.modal', function() {
+            // Update the lists of answered and unanswered questions
+            updateUnansweredList();
+        });
     });
 </script>
 @endsection 

@@ -375,6 +375,7 @@ Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' =
     Route::get('/exams/{id}/start', [App\Http\Controllers\ExamController::class, 'startExam'])->name('exams.start');
     Route::get('/exams/{id}/take', [App\Http\Controllers\ExamController::class, 'takeExam'])->name('exams.take');
     Route::post('/exams/save-answer', [App\Http\Controllers\ExamController::class, 'saveAnswer'])->name('exams.save-answer');
+    Route::get('/exams/check-answer', [App\Http\Controllers\ExamController::class, 'checkAnswer'])->name('exams.check-answer');
     Route::post('/exams/{id}/submit', [App\Http\Controllers\ExamController::class, 'submitExam'])->name('exams.submit');
     
     // Exam Results
