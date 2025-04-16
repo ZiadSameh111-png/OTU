@@ -10,6 +10,7 @@ use App\Http\Controllers\TeacherAttendanceController;
 use App\Http\Controllers\GradeController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\AdminExamController;
+use App\Http\Controllers\LocationAttendanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -338,6 +339,14 @@ Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'a
     Route::get('/courses/{courseId}/report', [GradeController::class, 'courseReport'])->name('courses.report');
     Route::get('/courses/{courseId}/export/{format?}', [GradeController::class, 'exportCourseGrades'])->name('courses.export');
 
+    // Location Settings
+    Route::get('/locations', [App\Http\Controllers\Admin\LocationSettingController::class, 'index'])->name('locations.index');
+    Route::get('/locations/create', [App\Http\Controllers\Admin\LocationSettingController::class, 'create'])->name('locations.create');
+    Route::post('/locations', [App\Http\Controllers\Admin\LocationSettingController::class, 'store'])->name('locations.store');
+    Route::get('/locations/{location}/edit', [App\Http\Controllers\Admin\LocationSettingController::class, 'edit'])->name('locations.edit');
+    Route::put('/locations/{location}', [App\Http\Controllers\Admin\LocationSettingController::class, 'update'])->name('locations.update');
+    Route::delete('/locations/{location}', [App\Http\Controllers\Admin\LocationSettingController::class, 'destroy'])->name('locations.destroy');
+
     // Exam Reports
     Route::get('/exams/reports', [App\Http\Controllers\ExamController::class, 'adminReportsIndex'])->name('exams.reports');
     Route::get('/exams/reports/{id}', [App\Http\Controllers\ExamController::class, 'adminReportShow'])->name('exams.reports.show');
@@ -366,6 +375,12 @@ Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' =
     Route::get('/exams/results', [App\Http\Controllers\ExamController::class, 'studentResults'])->name('exams.results');
     Route::get('/exams/results/{id}', [App\Http\Controllers\ExamController::class, 'viewResults'])->name('exams.results.view');
 
+    // تسجيل الحضور المكاني
+    Route::get('/location-attendance', [App\Http\Controllers\LocationAttendanceController::class, 'index'])->name('location-attendance.index');
+    Route::post('/location-attendance', [App\Http\Controllers\LocationAttendanceController::class, 'store'])->name('location-attendance.store');
+    Route::get('/location-attendance/history', [App\Http\Controllers\LocationAttendanceController::class, 'history'])->name('location-attendance.history');
+    Route::get('/location-attendance/by-date', [App\Http\Controllers\LocationAttendanceController::class, 'getByDate'])->name('location-attendance.by-date');
+
     // ... existing code ...
 });
 
@@ -387,4 +402,10 @@ Route::group(['middleware' => ['auth', 'teacher'], 'prefix' => 'teacher', 'as' =
     Route::get('/exams/grading/{id}', [App\Http\Controllers\ExamController::class, 'teacherGradingShow'])->name('exams.grading.show');
     Route::get('/exams/grading/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'gradeOpenEndedQuestions'])->name('exams.grading.open-ended');
     Route::post('/exams/grading/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'saveOpenEndedGrades'])->name('exams.grading.save');
+    
+    // تسجيل الحضور المكاني
+    Route::get('/location-attendance', [App\Http\Controllers\LocationAttendanceController::class, 'index'])->name('location-attendance.index');
+    Route::post('/location-attendance', [App\Http\Controllers\LocationAttendanceController::class, 'store'])->name('location-attendance.store');
+    Route::get('/location-attendance/history', [App\Http\Controllers\LocationAttendanceController::class, 'history'])->name('location-attendance.history');
+    Route::get('/location-attendance/by-date', [App\Http\Controllers\LocationAttendanceController::class, 'getByDate'])->name('location-attendance.by-date');
 });

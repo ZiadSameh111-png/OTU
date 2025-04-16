@@ -963,6 +963,13 @@
             </li>
 
             <li class="nav-item fade-in" style="animation-delay: 0.7s">
+                <a class="nav-link {{ request()->is('admin/locations*') ? 'active' : '' }}" href="{{ route('admin.locations.index') }}">
+                    <i class="fas fa-map-marker-alt"></i>
+                    إعدادات المواقع
+                </a>
+            </li>
+
+            <li class="nav-item fade-in" style="animation-delay: 0.75s">
                 <a class="nav-link {{ request()->routeIs('notifications*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
                     <i class="fas fa-bell"></i>
                     الإشعارات
@@ -1015,6 +1022,13 @@
                 </a>
             </li>
             
+            <li class="nav-item fade-in" style="animation-delay: 0.42s">
+                <a class="nav-link {{ request()->is('teacher/location-attendance*') ? 'active' : '' }}" href="{{ route('teacher.location-attendance.index') }}">
+                    <i class="fas fa-map-marker-alt"></i>
+                    تسجيل الحضور المكاني
+                </a>
+            </li>
+            
             <li class="nav-item fade-in" style="animation-delay: 0.45s">
                 <a class="nav-link {{ request()->routeIs('notifications*') ? 'active' : '' }}" href="{{ route('notifications.index') }}">
                     <i class="fas fa-bell"></i>
@@ -1057,6 +1071,13 @@
                 <a class="nav-link {{ request()->is('student/fees*') ? 'active' : '' }}" href="{{ route('student.fees') }}">
                     <i class="fas fa-money-bill-wave"></i>
                     الرسوم
+                </a>
+            </li>
+            
+            <li class="nav-item fade-in" style="animation-delay: 0.42s">
+                <a class="nav-link {{ request()->is('student/location-attendance*') ? 'active' : '' }}" href="{{ route('student.location-attendance.index') }}">
+                    <i class="fas fa-map-marker-alt"></i>
+                    تسجيل الحضور المكاني
                 </a>
             </li>
 

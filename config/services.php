@@ -31,4 +31,13 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Maps Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Using OpenStreetMap with Leaflet.js which is free and doesn't require API keys
+    |
+    */
+
 ];

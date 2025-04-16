@@ -17,3 +17,11 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Public routes
+Route::get('/locations', [App\Http\Controllers\Api\LocationController::class, 'getLocations']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    // Location checking endpoint
+    Route::post('/check-location', [App\Http\Controllers\Api\LocationController::class, 'checkLocation']);
+});
