@@ -12,6 +12,9 @@ use App\Http\Controllers\ExamController;
 use App\Http\Controllers\AdminExamController;
 use App\Http\Controllers\LocationAttendanceController;
 use App\Http\Controllers\Admin\LocationAttendanceController as AdminLocationAttendanceController;
+use App\Http\Controllers\GradeReportController;
+use App\Http\Controllers\Admin\GradeReportsController;
+use App\Http\Controllers\Student\GradeController as StudentGradeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -197,6 +200,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/teacher/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'manageCourse'])->name('teacher.grades.manage');
         Route::post('/teacher/grades/course/{course}/update', [App\Http\Controllers\GradeController::class, 'updateBatch'])->name('teacher.grades.update.batch');
         Route::post('/teacher/grades/course/{course}/submit', [App\Http\Controllers\GradeController::class, 'submitFinal'])->name('teacher.grades.submit.final');
+        Route::get('/teacher/grades/report/{course}', [App\Http\Controllers\GradeController::class, 'courseReport'])->name('teacher.grades.report');
 
         // Teacher Exam Routes
         Route::prefix('teacher/exams')->name('teacher.exams.')->middleware(['auth', 'role:Teacher'])->group(function () {
@@ -238,8 +242,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Grade Management Routes
     Route::middleware(['role:Teacher'])->group(function () {
-        Route::get('/teacher/grades', [GradeController::class, 'teacherIndex'])->name('teacher.grades.index');
-        Route::get('/teacher/grades/course/{course}', [GradeController::class, 'manageCourse'])->name('teacher.grades.manage');
+        // Route::get('/teacher/grades', [GradeController::class, 'teacherIndex'])->name('teacher.grades.index'); // Removed duplicate route
         Route::post('/teacher/grades/store', [GradeController::class, 'store'])->name('teacher.grades.store');
         Route::post('/teacher/grades/submit', [GradeController::class, 'submit'])->name('teacher.grades.submit');
     });
@@ -415,4 +418,53 @@ Route::group(['middleware' => ['auth', 'teacher'], 'prefix' => 'teacher', 'as' =
     Route::post('/location-attendance', [App\Http\Controllers\LocationAttendanceController::class, 'store'])->name('location-attendance.store');
     Route::get('/location-attendance/history', [App\Http\Controllers\LocationAttendanceController::class, 'history'])->name('location-attendance.history');
     Route::get('/location-attendance/by-date', [App\Http\Controllers\LocationAttendanceController::class, 'getByDate'])->name('location-attendance.by-date');
+});
+
+// Teacher Grades Routes
+Route::group(['middleware' => ['auth', 'teacher'], 'prefix' => 'teacher', 'as' => 'teacher.'], function () {
+    // Grade Management
+    Route::get('/grades', [GradeController::class, 'index'])->name('grades.index');
+    Route::get('/grades/{courseId}/manage', [GradeController::class, 'manageCourse'])->name('grades.manage');
+    Route::post('/grades/store', [GradeController::class, 'store'])->name('grades.store');
+    Route::post('/grades/finalize', [GradeController::class, 'finalize'])->name('grades.finalize');
+    
+    // Grade Reports
+    Route::get('/grades/reports', [GradeReportController::class, 'teacherReportsIndex'])->name('grades.reports');
+    Route::get('/grades/student/{studentId}/course/{courseId}', [GradeReportController::class, 'teacherStudentDetail'])->name('grades.student-detail');
+    Route::post('/grades/student/{studentId}/course/{courseId}', [GradeReportController::class, 'updateStudentGrades'])->name('grades.update-student');
+    Route::get('/grades/reports/export/{format?}', [GradeReportController::class, 'exportGrades'])->name('grades.export');
+    Route::post('/grades/update-online-grades', [GradeReportController::class, 'updateAllOnlineGrades'])->name('grades.update-online');
+});
+
+// Admin Grades Routes
+Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
+    // Grade Reports
+    Route::get('/grades/reports', [GradeReportController::class, 'adminReportsIndex'])->name('grades.reports');
+    Route::get('/grades/reports/export/{format?}', [GradeReportController::class, 'exportGrades'])->name('grades.export');
+});
+
+// Student Grades Routes
+Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' => 'student.'], function () {
+    // Grade Reports
+    Route::get('/grades/report', [GradeReportController::class, 'studentReport'])->name('grades.report');
+    Route::get('/grades/course/{courseId}', [GradeReportController::class, 'studentCourseDetail'])->name('grades.course-detail');
+});
+
+// Shared Grade Routes
+Route::group(['middleware' => ['auth'], 'prefix' => 'grades', 'as' => 'grades.'], function () {
+    Route::get('/exam/{attemptId}/detail', [GradeReportController::class, 'viewExamDetail'])->name('exam-detail');
+});
+
+// Admin Grade Reports Routes
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/grades/reports', [Admin\GradeReportsController::class, 'index'])->name('admin.grades.reports');
+    Route::get('/admin/grades/course-report/{id}', [Admin\GradeReportsController::class, 'courseReport'])->name('admin.grades.course_report');
+    Route::get('/admin/grades/student-report/{id}', [Admin\GradeReportsController::class, 'studentReport'])->name('admin.grades.student_report');
+    Route::get('/admin/grades/export-course-report/{id}', [Admin\GradeReportsController::class, 'exportCourseReport'])->name('admin.grades.export_course_report');
+    Route::get('/admin/grades/export-student-report/{id}', [Admin\GradeReportsController::class, 'exportStudentReport'])->name('admin.grades.export_student_report');
+});
+
+// Student Grades Report Route
+Route::middleware(['auth', 'role:student'])->group(function () {
+    Route::get('/student/grades/report', [Student\GradeController::class, 'report'])->name('student.grades.report');
 });

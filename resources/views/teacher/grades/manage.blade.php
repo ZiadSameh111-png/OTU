@@ -1,351 +1,383 @@
 @extends('layouts.app')
 
+@section('title', 'إدارة درجات ' . $course->name)
+
+@section('styles')
+<style>
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .grade-input {
+        width: 70px;
+    }
+    .grade-total {
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    .student-row:hover {
+        background-color: rgba(0,123,255,0.05);
+    }
+    .loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255,255,255,0.7);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        flex-direction: column;
+    }
+    .loading-text {
+        margin-top: 1rem;
+        font-weight: bold;
+    }
+    .edit-grades-btn {
+        font-size: 0.9rem;
+    }
+</style>
+@endsection
+
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <div class="row mb-4">
-        <div class="col-md-12">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2 class="m-0">إدارة درجات - {{ $course->name }}</h2>
-                <a href="{{ route('teacher.grades.index') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-right me-1"></i> العودة للقائمة
-                </a>
+        <div class="col-md-6">
+            <h2>إدارة درجات {{ $course->name }}</h2>
+            <p class="text-muted">{{ $course->code }}</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <a href="{{ route('teacher.grades.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-2"></i> العودة للمقررات
+            </a>
+            <a href="{{ route('teacher.grades.update-online', ['course_id' => $course->id]) }}" class="btn btn-info">
+                <i class="fas fa-sync me-2"></i> تحديث درجات الاختبارات الإلكترونية
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">فلترة الطلاب</h5>
+        </div>
+        <div class="card-body">
+            <form id="filterForm" class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="group" class="form-label">المجموعة</label>
+                    <select class="form-select" id="group">
+                        <option value="">جميع المجموعات</option>
+                        @foreach($groups as $group)
+                        <option value="{{ $group->id }}">{{ $group->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="status" class="form-label">حالة الدرجات</label>
+                    <select class="form-select" id="status">
+                        <option value="">جميع الحالات</option>
+                        <option value="finalized">المؤكدة</option>
+                        <option value="not-finalized">غير مؤكدة</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3 d-flex align-items-end">
+                    <button type="button" id="filterBtn" class="btn btn-primary w-100">
+                        <i class="fas fa-filter me-2"></i> تطبيق الفلتر
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <form id="gradesForm">
+        @csrf
+        <input type="hidden" name="course_id" value="{{ $course->id }}">
+        
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">درجات الطلاب</h5>
+                <div>
+                    <button type="button" id="saveBtn" class="btn btn-success me-2">
+                        <i class="fas fa-save me-2"></i> حفظ الدرجات
+                    </button>
+                    <button type="button" id="finalizeBtn" class="btn btn-danger">
+                        <i class="fas fa-check-circle me-2"></i> تأكيد وإرسال الدرجات
+                    </button>
+                </div>
             </div>
-            
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show">
-                    <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show">
-                    <i class="fas fa-exclamation-circle me-2"></i>{{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="m-0">معلومات المقرر</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>اسم المقرر:</strong> {{ $course->name }}</p>
-                            <p><strong>رمز المقرر:</strong> {{ $course->code }}</p>
-                            <p><strong>توزيع الدرجات:</strong> 
-                                الاختبارات الشهرية ({{ $course->midterm_grade }})، 
-                                الأعمال العملية ({{ $course->assignment_grade }})، 
-                                النهائي ({{ $course->final_grade }})
-                            </p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>عدد المجموعات:</strong> {{ $groups->count() }}</p>
-                            <p><strong>إجمالي عدد الطلاب:</strong> 
-                                @php
-                                    $totalStudents = 0;
-                                    foreach($groups as $group) {
-                                        $totalStudents += $group->students->count();
-                                    }
-                                    echo $totalStudents;
-                                @endphp
-                            </p>
-                            <p><strong>نسبة اكتمال الدرجات:</strong> 
-                                @php
-                                    $submittedGrades = $grades->where('submitted', true)->count();
-                                    echo $totalStudents > 0 ? 
-                                        round(($submittedGrades / $totalStudents) * 100) . '%' : 
-                                        '0%';
-                                @endphp
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="m-0">جدول الدرجات</h5>
-                    
-                    <div class="d-flex">
-                        <div class="me-3">
-                            <select id="groupFilter" class="form-select form-select-sm">
-                                <option value="all">جميع المجموعات</option>
-                                @foreach($groups as $group)
-                                    <option value="{{ $group->id }}">{{ $group->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        
-                        <div class="dropdown me-3">
-                            <button class="btn btn-sm btn-outline-light dropdown-toggle" type="button" id="statusDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-filter me-1"></i> تصفية
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="statusDropdown">
-                                <li><a class="dropdown-item filter-status" data-status="all" href="#">جميع الطلاب</a></li>
-                                <li><a class="dropdown-item filter-status" data-status="submitted" href="#">الدرجات المثبتة</a></li>
-                                <li><a class="dropdown-item filter-status" data-status="not_submitted" href="#">الدرجات غير المثبتة</a></li>
-                                <li><a class="dropdown-item filter-status" data-status="missing" href="#">بدون درجات</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card-body">
-                    <form id="gradesForm">
-                        @csrf
-                        <input type="hidden" name="course_id" value="{{ $course->id }}">
-                        
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>اسم الطالب</th>
-                                        <th>رقم الطالب</th>
-                                        <th>المجموعة</th>
-                                        <th width="12%">الاختبارات الشهرية ({{ $course->midterm_grade }})</th>
-                                        <th width="12%">الأعمال العملية ({{ $course->assignment_grade }})</th>
-                                        <th width="12%">النهائي ({{ $course->final_grade }})</th>
-                                        <th width="12%">المجموع ({{ $course->midterm_grade + $course->assignment_grade + $course->final_grade }})</th>
-                                        <th>ملاحظات</th>
-                                        <th>الحالة</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @php
-                                        $studentsFound = false;
-                                    @endphp
-                                    
-                                    @foreach($groups as $group)
-                                        @foreach($group->students as $student)
-                                            @php
-                                                $studentsFound = true;
-                                                $grade = $grades->where('student_id', $student->id)->first();
-                                                $midtermGrade = $grade ? $grade->midterm_grade : null;
-                                                $assignmentGrade = $grade ? $grade->assignment_grade : null;
-                                                $finalGrade = $grade ? $grade->final_grade : null;
-                                                $comments = $grade ? $grade->comments : '';
-                                                $submitted = $grade ? $grade->submitted : false;
-                                                $totalGrade = ($midtermGrade !== null ? $midtermGrade : 0) + 
-                                                             ($assignmentGrade !== null ? $assignmentGrade : 0) + 
-                                                             ($finalGrade !== null ? $finalGrade : 0);
-                                            @endphp
-                                            
-                                            <tr class="student-row" 
-                                                data-group-id="{{ $group->id }}" 
-                                                data-status="{{ $grade ? ($submitted ? 'submitted' : 'not_submitted') : 'missing' }}">
-                                                <td>{{ $student->name }}</td>
-                                                <td>{{ $student->student_id }}</td>
-                                                <td>{{ $group->name }}</td>
-                                                <td>
-                                                    <input type="number" 
-                                                           class="form-control grade-input midterm-grade" 
-                                                           name="grades[{{ $student->id }}][midterm_grade]" 
-                                                           value="{{ $midtermGrade }}"
-                                                           min="0" 
-                                                           max="{{ $course->midterm_grade }}" 
-                                                           step="0.5"
-                                                           {{ $submitted ? 'disabled' : '' }}>
-                                                </td>
-                                                <td>
-                                                    <input type="number" 
-                                                           class="form-control grade-input assignment-grade" 
-                                                           name="grades[{{ $student->id }}][assignment_grade]" 
-                                                           value="{{ $assignmentGrade }}"
-                                                           min="0" 
-                                                           max="{{ $course->assignment_grade }}" 
-                                                           step="0.5"
-                                                           {{ $submitted ? 'disabled' : '' }}>
-                                                </td>
-                                                <td>
-                                                    <input type="number" 
-                                                           class="form-control grade-input final-grade" 
-                                                           name="grades[{{ $student->id }}][final_grade]" 
-                                                           value="{{ $finalGrade }}"
-                                                           min="0" 
-                                                           max="{{ $course->final_grade }}" 
-                                                           step="0.5"
-                                                           {{ $submitted ? 'disabled' : '' }}>
-                                                </td>
-                                                <td>
-                                                    <span class="total-grade">{{ $totalGrade }}</span>/{{ $course->midterm_grade + $course->assignment_grade + $course->final_grade }}
-                                                </td>
-                                                <td>
-                                                    <input type="text" 
-                                                           class="form-control" 
-                                                           name="grades[{{ $student->id }}][comments]" 
-                                                           value="{{ $comments }}"
-                                                           {{ $submitted ? 'disabled' : '' }}>
-                                                </td>
-                                                <td>
-                                                    @if($submitted)
-                                                        <span class="badge bg-success">مثبتة</span>
-                                                    @else
-                                                        <span class="badge bg-warning">غير مثبتة</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    @endforeach
-                                    
-                                    @if(!$studentsFound)
-                                        <tr>
-                                            <td colspan="9" class="text-center py-4">
-                                                لا يوجد طلاب مسجلين في هذا المقرر
-                                            </td>
-                                        </tr>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width: 5%">#</th>
+                                <th style="width: 20%">اسم الطالب</th>
+                                <th style="width: 10%">رقم الطالب</th>
+                                <th style="width: 10%">المجموعة</th>
+                                <th style="width: 15%">درجة الاختبارات الإلكترونية</th>
+                                <th style="width: 15%">درجة الاختبارات الورقية</th>
+                                <th style="width: 15%">الدرجة العملية</th>
+                                <th style="width: 10%">الإجمالي</th>
+                                <th style="width: 10%">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTable">
+                            @foreach($students as $index => $student)
+                            @php
+                                $grade = $gradesCollection[$student->id] ?? null;
+                                $isFinalized = $grade && $grade->is_final;
+                                $totalGrade = $grade ? $grade->total_grade : 0;
+                                $totalPossible = $grade ? $grade->total_possible : 0;
+                                
+                                // Online exam grades
+                                $onlineExamGrade = $grade ? $grade->online_exam_grade : null;
+                                $onlineExamTotal = $grade ? $grade->online_exam_total : null;
+                                
+                                // Paper exam grades
+                                $paperExamGrade = $grade ? $grade->paper_exam_grade : null;
+                                $paperExamTotal = $grade ? $grade->paper_exam_total : null;
+                                
+                                // Practical grades
+                                $practicalGrade = $grade ? $grade->practical_grade : null;
+                                $practicalTotal = $grade ? $grade->practical_total : null;
+                            @endphp
+                            <tr class="student-row {{ $isFinalized ? 'table-success' : '' }}" data-student-id="{{ $student->id }}" data-group-id="{{ $student->group_id }}" data-status="{{ $isFinalized ? 'finalized' : 'not-finalized' }}">
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $student->name }}</td>
+                                <td>{{ $student->id }}</td>
+                                <td>{{ $student->group->name ?? 'غير محدد' }}</td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input online-grade" name="grades[{{ $student->id }}][online_exam_grade]" value="{{ $onlineExamGrade }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                        <span class="input-group-text">/</span>
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input online-total" name="grades[{{ $student->id }}][online_exam_total]" value="{{ $onlineExamTotal ?? $totalOnlineMarks }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input paper-grade" name="grades[{{ $student->id }}][paper_exam_grade]" value="{{ $paperExamGrade }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                        <span class="input-group-text">/</span>
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input paper-total" name="grades[{{ $student->id }}][paper_exam_total]" value="{{ $paperExamTotal }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group">
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input practical-grade" name="grades[{{ $student->id }}][practical_grade]" value="{{ $practicalGrade }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                        <span class="input-group-text">/</span>
+                                        <input type="number" min="0" step="0.5" class="form-control grade-input practical-total" name="grades[{{ $student->id }}][practical_total]" value="{{ $practicalTotal }}" {{ $isFinalized ? 'disabled' : '' }}>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <span class="total-grade">{{ $totalGrade }}</span> / <span class="total-possible">{{ $totalPossible }}</span>
+                                    @if($totalPossible > 0)
+                                    <div class="progress mt-1" style="height: 5px;">
+                                        <div class="progress-bar" role="progressbar" style="width: {{ ($totalGrade / $totalPossible) * 100 }}%"></div>
+                                    </div>
                                     @endif
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        <div class="d-flex justify-content-end mt-4">
-                            <button type="button" id="saveGradesBtn" class="btn btn-primary me-2">
-                                <i class="fas fa-save me-1"></i> حفظ التغييرات
-                            </button>
-                            <button type="button" id="submitGradesBtn" class="btn btn-success">
-                                <i class="fas fa-check-circle me-1"></i> تثبيت الدرجات
-                            </button>
-                        </div>
-                    </form>
+                                </td>
+                                <td>
+                                    <a href="{{ route('teacher.grades.student-detail', ['studentId' => $student->id, 'courseId' => $course->id]) }}" class="btn btn-sm btn-primary edit-grades-btn w-100">
+                                        <i class="fas fa-edit me-1"></i> التفاصيل
+                                    </a>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
+    </form>
+
+    <div class="loading d-none">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <div class="loading-text">جاري حفظ الدرجات...</div>
     </div>
 </div>
 
-<!-- Confirmation Modal -->
-<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-labelledby="submitConfirmModalLabel" aria-hidden="true">
+<!-- Modal de confirmación para finalización -->
+<div class="modal fade" id="finalizeModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="submitConfirmModalLabel">تأكيد تثبيت الدرجات</h5>
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">تأكيد إرسال الدرجات</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    تحذير: بعد تثبيت الدرجات، لن تتمكن من تعديلها إلا بطلب من الإدارة. هل أنت متأكد من تثبيت الدرجات؟
+                    <strong>تنبيه هام:</strong> بعد تأكيد الدرجات وإرسالها، لن يمكنك تعديلها بعد ذلك. هل أنت متأكد من رغبتك في تأكيد وإرسال الدرجات؟
                 </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" id="confirmSubmitBtn" class="btn btn-success">تأكيد التثبيت</button>
+                <button type="button" id="confirmFinalizeBtn" class="btn btn-danger">تأكيد وإرسال</button>
             </div>
         </div>
     </div>
 </div>
-
 @endsection
 
-@push('scripts')
+@section('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Calculate total grade when input changes
-        document.querySelectorAll('.grade-input').forEach(function(input) {
-            input.addEventListener('input', function() {
-                const row = this.closest('tr');
-                const midtermGrade = parseFloat(row.querySelector('.midterm-grade').value) || 0;
-                const assignmentGrade = parseFloat(row.querySelector('.assignment-grade').value) || 0;
-                const finalGrade = parseFloat(row.querySelector('.final-grade').value) || 0;
-                
-                const totalGrade = midtermGrade + assignmentGrade + finalGrade;
-                row.querySelector('.total-grade').textContent = totalGrade;
-            });
-        });
-        
-        // Group filter
-        document.getElementById('groupFilter').addEventListener('change', function() {
-            const groupId = this.value;
-            filterStudents();
-        });
-        
-        // Status filter
-        document.querySelectorAll('.filter-status').forEach(function(link) {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                document.querySelectorAll('.filter-status').forEach(item => item.classList.remove('active'));
-                this.classList.add('active');
-                filterStudents();
-            });
-        });
-        
-        function filterStudents() {
-            const groupId = document.getElementById('groupFilter').value;
-            const statusFilter = document.querySelector('.filter-status.active')?.dataset.status || 'all';
+        // Function to filter students
+        document.getElementById('filterBtn').addEventListener('click', function() {
+            const groupId = document.getElementById('group').value;
+            const status = document.getElementById('status').value;
             
-            document.querySelectorAll('.student-row').forEach(function(row) {
-                const rowGroupId = row.dataset.groupId;
-                const rowStatus = row.dataset.status;
+            const rows = document.querySelectorAll('#studentsTable tr');
+            
+            rows.forEach(row => {
+                const rowGroupId = row.getAttribute('data-group-id');
+                const rowStatus = row.getAttribute('data-status');
+                let showRow = true;
                 
-                let showByGroup = groupId === 'all' || rowGroupId === groupId;
-                let showByStatus = statusFilter === 'all' || rowStatus === statusFilter;
+                if (groupId && rowGroupId !== groupId) {
+                    showRow = false;
+                }
                 
-                row.style.display = (showByGroup && showByStatus) ? '' : 'none';
+                if (status && rowStatus !== status) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
             });
+        });
+        
+        // Calculate total grade for a row
+        function calculateTotal(row) {
+            const onlineGrade = parseFloat(row.querySelector('.online-grade').value) || 0;
+            const paperGrade = parseFloat(row.querySelector('.paper-grade').value) || 0;
+            const practicalGrade = parseFloat(row.querySelector('.practical-grade').value) || 0;
+            
+            const onlineTotal = parseFloat(row.querySelector('.online-total').value) || 0;
+            const paperTotal = parseFloat(row.querySelector('.paper-total').value) || 0;
+            const practicalTotal = parseFloat(row.querySelector('.practical-total').value) || 0;
+            
+            const totalGrade = onlineGrade + paperGrade + practicalGrade;
+            const totalPossible = onlineTotal + paperTotal + practicalTotal;
+            
+            row.querySelector('.total-grade').textContent = totalGrade.toFixed(1);
+            row.querySelector('.total-possible').textContent = totalPossible.toFixed(1);
+            
+            if (totalPossible > 0) {
+                row.querySelector('.progress-bar').style.width = `${(totalGrade / totalPossible) * 100}%`;
+            }
         }
         
+        // Add event listeners to recalculate totals when grades change
+        document.querySelectorAll('.grade-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const row = this.closest('tr');
+                calculateTotal(row);
+            });
+        });
+        
+        // Calculate initial totals
+        document.querySelectorAll('.student-row').forEach(row => {
+            calculateTotal(row);
+        });
+        
         // Save grades
-        document.getElementById('saveGradesBtn').addEventListener('click', function() {
+        document.getElementById('saveBtn').addEventListener('click', function() {
+            const loading = document.querySelector('.loading');
+            loading.classList.remove('d-none');
+            
             const formData = new FormData(document.getElementById('gradesForm'));
             
-            fetch('{{ route("teacher.grades.store") }}', {
+            fetch("{{ route('teacher.grades.store') }}", {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
             })
             .then(response => response.json())
             .then(data => {
-                if(data.success) {
-                    alert(data.success);
-                } else if(data.error) {
-                    alert(data.error);
+                loading.classList.add('d-none');
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم الحفظ بنجاح',
+                        text: data.success,
+                        confirmButtonText: 'موافق'
+                    });
+                } else if (data.error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ',
+                        text: data.error,
+                        confirmButtonText: 'موافق'
+                    });
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء حفظ الدرجات');
+                loading.classList.add('d-none');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: 'حدث خطأ أثناء حفظ البيانات. يرجى المحاولة مرة أخرى.',
+                    confirmButtonText: 'موافق'
+                });
             });
         });
         
-        // Submit grades - show confirmation modal
-        document.getElementById('submitGradesBtn').addEventListener('click', function() {
-            const submitModal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
-            submitModal.show();
+        // Finalize grades
+        document.getElementById('finalizeBtn').addEventListener('click', function() {
+            const finalizeModal = new bootstrap.Modal(document.getElementById('finalizeModal'));
+            finalizeModal.show();
         });
         
-        // Confirm submit grades
-        document.getElementById('confirmSubmitBtn').addEventListener('click', function() {
+        document.getElementById('confirmFinalizeBtn').addEventListener('click', function() {
+            const loading = document.querySelector('.loading');
+            loading.classList.remove('d-none');
+            
             const formData = new FormData(document.getElementById('gradesForm'));
             
-            fetch('{{ route("teacher.grades.submit") }}', {
+            fetch("{{ route('teacher.grades.finalize') }}", {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
             })
             .then(response => response.json())
             .then(data => {
-                if(data.success) {
-                    alert(data.success);
-                    location.reload();
-                } else if(data.error) {
-                    alert(data.error);
+                loading.classList.add('d-none');
+                
+                if (data.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'تم التأكيد بنجاح',
+                        text: data.success,
+                        confirmButtonText: 'موافق'
+                    }).then(() => {
+                        window.location.reload();
+                    });
+                } else if (data.error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'خطأ',
+                        text: data.error,
+                        confirmButtonText: 'موافق'
+                    });
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء تثبيت الدرجات');
+                loading.classList.add('d-none');
+                Swal.fire({
+                    icon: 'error',
+                    title: 'خطأ',
+                    text: 'حدث خطأ أثناء تأكيد الدرجات. يرجى المحاولة مرة أخرى.',
+                    confirmButtonText: 'موافق'
+                });
             });
             
-            bootstrap.Modal.getInstance(document.getElementById('submitConfirmModal')).hide();
+            const finalizeModal = bootstrap.Modal.getInstance(document.getElementById('finalizeModal'));
+            finalizeModal.hide();
         });
     });
 </script>
-@endpush 
+@endsection 

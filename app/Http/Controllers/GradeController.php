@@ -24,6 +24,16 @@ class GradeController extends Controller
     }
 
     /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index()
+    {
+        return $this->teacherIndex();
+    }
+
+    /**
      * Display teacher's course list for grade management.
      *
      * @return \Illuminate\Http\Response
@@ -37,7 +47,76 @@ class GradeController extends Controller
 
         $courses = $teacher->teacherCourses;
         
-        return view('teacher.grades.index', compact('courses'));
+        // Current semester
+        $currentSemester = Carbon::now()->year . '-' . (Carbon::now()->month <= 6 ? '1' : '2');
+        
+        // Active and archived courses
+        $activeCourses = $courses->filter(function($course) use ($currentSemester) {
+            return $course->semester == $currentSemester;
+        });
+        
+        $archivedCourses = $courses->filter(function($course) use ($currentSemester) {
+            return $course->semester != $currentSemester;
+        });
+        
+        // Get statistics
+        $totalCourses = $courses->count();
+        $totalStudents = 0;
+        $pendingGrades = 0;
+        $totalGrades = 0;
+        $gradeDistribution = [
+            'A' => 0,
+            'B' => 0,
+            'C' => 0,
+            'D' => 0,
+            'F' => 0
+        ];
+        
+        // Calculate student counts and grade stats
+        foreach ($courses as $course) {
+            // Add student count attribute to each course
+            $course->students_count = DB::table('course_group')
+                ->where('course_id', $course->id)
+                ->join('users', 'users.group_id', '=', 'course_group.group_id')
+                ->join('role_user', 'role_user.user_id', '=', 'users.id')
+                ->join('roles', 'roles.id', '=', 'role_user.role_id')
+                ->where('roles.name', 'Student')
+                ->count();
+                
+            // Add final grades count attribute
+            $course->final_grades_count = Grade::where('course_id', $course->id)
+                ->where('is_final', true)
+                ->count();
+                
+            // Mark as completed if all students have final grades
+            $course->is_grading_completed = ($course->students_count > 0 && 
+                $course->students_count == $course->final_grades_count);
+                
+            // Add to statistics
+            $totalStudents += $course->students_count;
+            
+            // Count pending grades
+            $pendingGrades += $course->students_count - $course->final_grades_count;
+        }
+        
+        // Get recent updates
+        $recentUpdates = Grade::with(['course', 'student'])
+            ->whereIn('course_id', $courses->pluck('id'))
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get();
+        
+        return view('teacher.grades.index', compact(
+            'courses', 
+            'activeCourses', 
+            'archivedCourses', 
+            'totalCourses', 
+            'totalStudents',
+            'pendingGrades',
+            'recentUpdates',
+            'gradeDistribution',
+            'totalGrades'
+        ));
     }
 
     /**
@@ -369,11 +448,19 @@ class GradeController extends Controller
     public function courseReport($courseId)
     {
         $user = Auth::user();
-        if (!$user->hasRole('Admin')) {
+        
+        // Allow both admin and teacher access
+        if ($user->hasRole('Admin')) {
+            // Admin can access all courses
+            $course = Course::with(['teacher', 'groups.students', 'grades'])->findOrFail($courseId);
+        } elseif ($user->hasRole('Teacher')) {
+            // Teacher can only access their own courses
+            $course = Course::with(['teacher', 'groups.students', 'grades'])
+                ->where('teacher_id', $user->id)
+                ->findOrFail($courseId);
+        } else {
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
-
-        $course = Course::with(['teacher', 'groups.students', 'grades'])->findOrFail($courseId);
         
         // Get all grades for this course, grouped by grade letter
         $gradeDistribution = [
@@ -462,7 +549,10 @@ class GradeController extends Controller
             'grade_distribution' => $gradeDistribution,
         ];
         
-        return view('admin.grades.course_report', compact('course', 'stats', 'groupStats'));
+        // Determine which view to use based on user role
+        $view = $user->hasRole('Admin') ? 'admin.grades.course_report' : 'teacher.grades.report';
+        
+        return view($view, compact('course', 'stats', 'groupStats'));
     }
 
     /**

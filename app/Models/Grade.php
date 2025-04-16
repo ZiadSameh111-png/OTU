@@ -15,13 +15,17 @@ class Grade extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'course_id',
         'student_id',
-        'midterm_grade',
-        'assignment_grade',
-        'final_grade',
-        'submitted',
-        'submission_date',
+        'course_id',
+        'online_exam_grade',
+        'online_exam_total',
+        'paper_exam_grade',
+        'paper_exam_total',
+        'practical_grade',
+        'practical_total',
+        'total_grade',
+        'total_possible',
+        'is_final',
         'updated_by',
         'comments',
     ];
@@ -32,11 +36,15 @@ class Grade extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'midterm_grade' => 'float',
-        'assignment_grade' => 'float',
-        'final_grade' => 'float',
-        'submitted' => 'boolean',
-        'submission_date' => 'datetime',
+        'online_exam_grade' => 'float',
+        'online_exam_total' => 'float',
+        'paper_exam_grade' => 'float',
+        'paper_exam_total' => 'float',
+        'practical_grade' => 'float',
+        'practical_total' => 'float',
+        'total_grade' => 'float',
+        'total_possible' => 'float',
+        'is_final' => 'boolean',
     ];
 
     /**
@@ -64,13 +72,70 @@ class Grade extends Model
     }
 
     /**
-     * Calculate the total grade (sum of assignment and final grades).
-     * 
-     * @return float
+     * Get the exam submissions for this grade.
      */
-    public function getTotalAttribute()
+    public function examSubmissions()
     {
-        return $this->midterm_grade + $this->assignment_grade + $this->final_grade;
+        return $this->hasMany(StudentExamAttempt::class, 'student_id', 'student_id')
+                    ->whereHas('exam', function($query) {
+                        $query->where('course_id', $this->course_id);
+                    });
+    }
+
+    /**
+     * Calculate the online exam percentage.
+     * 
+     * @return float|null
+     */
+    public function getOnlineExamPercentageAttribute()
+    {
+        if (!$this->online_exam_total || !$this->online_exam_grade) {
+            return null;
+        }
+        
+        return ($this->online_exam_grade / $this->online_exam_total) * 100;
+    }
+
+    /**
+     * Calculate the paper exam percentage.
+     * 
+     * @return float|null
+     */
+    public function getPaperExamPercentageAttribute()
+    {
+        if (!$this->paper_exam_total || !$this->paper_exam_grade) {
+            return null;
+        }
+        
+        return ($this->paper_exam_grade / $this->paper_exam_total) * 100;
+    }
+
+    /**
+     * Calculate the practical percentage.
+     * 
+     * @return float|null
+     */
+    public function getPracticalPercentageAttribute()
+    {
+        if (!$this->practical_total || !$this->practical_grade) {
+            return null;
+        }
+        
+        return ($this->practical_grade / $this->practical_total) * 100;
+    }
+
+    /**
+     * Calculate the total percentage.
+     * 
+     * @return float|null
+     */
+    public function getTotalPercentageAttribute()
+    {
+        if (!$this->total_possible || !$this->total_grade) {
+            return null;
+        }
+        
+        return ($this->total_grade / $this->total_possible) * 100;
     }
 
     /**
@@ -80,13 +145,11 @@ class Grade extends Model
      */
     public function getLetterGradeAttribute()
     {
-        if (!$this->submitted || is_null($this->midterm_grade) || is_null($this->assignment_grade) || is_null($this->final_grade)) {
+        if (!$this->is_final || !$this->total_possible || !$this->total_grade) {
             return '-';
         }
 
-        $course = $this->course;
-        $maxTotal = $course->midterm_grade + $course->assignment_grade + $course->final_grade;
-        $percentage = ($this->getTotalAttribute() / $maxTotal) * 100;
+        $percentage = $this->getTotalPercentageAttribute();
 
         if ($percentage >= 95) return 'A+';
         if ($percentage >= 90) return 'A';
@@ -104,7 +167,7 @@ class Grade extends Model
      * 
      * @return string
      */
-    public function getLetterGradeColor()
+    public function getLetterGradeColorAttribute()
     {
         $letterGrade = $this->getLetterGradeAttribute();
         
@@ -116,6 +179,68 @@ class Grade extends Model
         if ($letterGrade == 'F') return 'danger';
         
         return 'secondary';
+    }
+
+    /**
+     * Calculate and update the total grade.
+     * 
+     * @return void
+     */
+    public function calculateTotalGrade()
+    {
+        $onlineGrade = $this->online_exam_grade ?? 0;
+        $paperGrade = $this->paper_exam_grade ?? 0;
+        $practicalGrade = $this->practical_grade ?? 0;
+        
+        $this->total_grade = $onlineGrade + $paperGrade + $practicalGrade;
+        
+        $onlineTotal = $this->online_exam_total ?? 0;
+        $paperTotal = $this->paper_exam_total ?? 0;
+        $practicalTotal = $this->practical_total ?? 0;
+        
+        $this->total_possible = $onlineTotal + $paperTotal + $practicalTotal;
+        
+        $this->save();
+    }
+
+    /**
+     * Update online exam grades based on submissions.
+     * 
+     * @return void
+     */
+    public function updateOnlineExamGrades()
+    {
+        $courseId = $this->course_id;
+        $studentId = $this->student_id;
+        
+        // Obtener todos los exámenes de este curso
+        $exams = Exam::where('course_id', $courseId)->get();
+        
+        if ($exams->isEmpty()) {
+            return;
+        }
+        
+        $totalMarks = 0;
+        $totalPossible = 0;
+        
+        foreach ($exams as $exam) {
+            // Buscar el intento de este examen para este estudiante
+            $attempt = StudentExamAttempt::where('student_id', $studentId)
+                ->where('exam_id', $exam->id)
+                ->where('status', 'graded')
+                ->first();
+            
+            if ($attempt) {
+                $totalMarks += $attempt->total_marks_obtained ?? 0;
+                $totalPossible += $attempt->total_possible_marks ?? 0;
+            }
+        }
+        
+        $this->online_exam_grade = $totalMarks;
+        $this->online_exam_total = $totalPossible;
+        
+        // Recalcular el total
+        $this->calculateTotalGrade();
     }
 
     /**
@@ -143,24 +268,24 @@ class Grade extends Model
     }
 
     /**
-     * Scope a query to only include submitted grades.
+     * Scope a query to only include finalized grades.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeSubmitted($query)
+    public function scopeFinalized($query)
     {
-        return $query->where('submitted', true);
+        return $query->where('is_final', true);
     }
 
     /**
-     * Scope a query to only include unsubmitted grades.
+     * Scope a query to only include non-finalized grades.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
-    public function scopeUnsubmitted($query)
+    public function scopeNotFinalized($query)
     {
-        return $query->where('submitted', false);
+        return $query->where('is_final', false);
     }
 }
