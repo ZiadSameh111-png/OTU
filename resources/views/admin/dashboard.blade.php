@@ -33,7 +33,7 @@
                 <div class="card-body d-flex flex-column p-4">
                     <div class="d-flex align-items-center mb-3">
                         <div class="stats-icon bg-primary bg-opacity-10 p-3 rounded-circle me-3">
-                            <i class="fas fa-user-graduate text-primary fs-3"></i>
+                            <i class="fas fa-graduation-cap text-primary fs-3"></i>
                         </div>
                         <div>
                             <h3 class="mb-0 fw-bold">{{ $stats['studentsCount'] }}</h3>

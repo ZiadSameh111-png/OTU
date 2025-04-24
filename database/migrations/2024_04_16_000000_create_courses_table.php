@@ -8,8 +8,6 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
     public function up(): void
     {
@@ -18,17 +16,18 @@ return new class extends Migration
             $table->string('name');
             $table->string('code')->unique();
             $table->text('description')->nullable();
+            $table->foreignId('teacher_id')->constrained('users')->onDelete('cascade');
+            $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
         Schema::dropIfExists('courses');
     }
-};
+}; 
