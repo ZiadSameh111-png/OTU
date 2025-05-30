@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Group;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use TCPDF;
 
 class GradeReportsController extends Controller
 {
@@ -105,6 +106,16 @@ class GradeReportsController extends Controller
             ->limit(10)
             ->get();
         
+        // Transform atRiskStudents into lowPerformers format
+        $lowPerformers = $atRiskStudents->map(function($student) {
+            return [
+                'id' => $student->id,
+                'name' => $student->user->name,
+                'group' => optional($student->group)->name ?? 'غير محدد',
+                'gpa' => $student->gpa,
+            ];
+        });
+        
         $stats = [
             'total_students' => $totalStudents,
             'total_courses' => $totalCourses,
@@ -112,10 +123,7 @@ class GradeReportsController extends Controller
             'fail_count' => $failCount,
             'pass_rate' => round($passRate, 1),
             'avg_gpa' => round($averageGPA, 2),
-            'at_risk_count' => Student::whereHas('grades', function ($query) {
-                $query->groupBy('student_id')
-                    ->havingRaw('AVG(gpa) < ?', [2.0]);
-            })->count(),
+            'at_risk_students' => $atRiskStudents->count(),
         ];
         
         return view('admin.grades.reports', compact(
@@ -127,7 +135,8 @@ class GradeReportsController extends Controller
             'gradeDistribution',
             'coursePerformance',
             'topPerformers',
-            'atRiskStudents'
+            'atRiskStudents',
+            'lowPerformers'
         ));
     }
 
@@ -139,7 +148,7 @@ class GradeReportsController extends Controller
      */
     public function courseReport($id)
     {
-        $course = Course::with(['teacher', 'grades.student.user', 'groups'])->findOrFail($id);
+        $course = Course::with(['grades.student.user', 'groups'])->findOrFail($id);
         
         // Get all students in the course with their grades
         $students = $course->grades->map(function ($grade) {
@@ -230,7 +239,7 @@ class GradeReportsController extends Controller
      */
     public function studentReport($id)
     {
-        $student = Student::with(['user', 'group', 'grades.course.teacher'])->findOrFail($id);
+        $student = Student::with(['user', 'group', 'grades.course.teachers'])->findOrFail($id);
         
         // Calculate GPA
         $gpa = $student->grades->avg('gpa') ?? 0;
@@ -263,7 +272,7 @@ class GradeReportsController extends Controller
                 'code' => $course->code,
                 'type' => $course->type ?? 'core',
                 'credits' => $course->credits ?? 3,
-                'instructor' => optional($course->teacher)->name ?? 'غير محدد',
+                'instructor' => $course->teachers->count() > 0 ? $course->teachers->pluck('name')->implode('، ') : 'غير محدد',
                 'assignment_score' => $assignmentScore,
                 'assignment_max' => $assignmentMax,
                 'assignment_percentage' => $assignmentPercentage,
@@ -306,7 +315,7 @@ class GradeReportsController extends Controller
                 'code' => $grade->course->code,
                 'type' => $grade->course->type ?? 'core',
                 'credits' => $grade->course->credits ?? 3,
-                'instructor' => optional($grade->course->teacher)->name ?? 'غير محدد',
+                'instructor' => $grade->course->teachers->count() > 0 ? $grade->course->teachers->pluck('name')->implode('، ') : 'غير محدد',
                 'total_score' => $grade->score,
                 'total_max' => $grade->course->total_grade ?? 100,
                 'total_percentage' => ($grade->score / ($grade->course->total_grade ?? 100)) * 100,
@@ -419,28 +428,229 @@ class GradeReportsController extends Controller
     }
 
     /**
-     * Export course report as PDF
+     * Export course report in specified format.
      *
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
     public function exportCourseReport($id)
     {
-        // Placeholder for PDF export functionality
-        // In a real implementation, you would generate a PDF here
-        return redirect()->back()->with('success', 'تم تصدير تقرير المقرر بنجاح.');
+        $course = Course::with(['grades.student.user'])->findOrFail($id);
+        // Add export logic here
+        return response()->json(['message' => 'Export functionality to be implemented']);
     }
 
     /**
-     * Export student report as PDF
+     * Export student report in specified format.
      *
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
     public function exportStudentReport($id)
     {
-        // Placeholder for PDF export functionality
-        // In a real implementation, you would generate a PDF here
-        return redirect()->back()->with('success', 'تم تصدير تقرير الطالب بنجاح.');
+        $student = Student::with(['grades.course'])->findOrFail($id);
+        
+        // Get current semester courses
+        $currentSemester = 'الفصل الحالي'; // You might want to get this from your configuration
+        $currentCourses = [];
+        foreach ($student->grades as $grade) {
+            if ($grade->course->semester === $currentSemester) {
+                $currentCourses[] = [
+                    'name' => $grade->course->name,
+                    'code' => $grade->course->code,
+                    'credits' => $grade->course->credit_hours,
+                    'assignment_score' => $grade->assignment_score,
+                    'assignment_max' => $grade->course->assignment_max,
+                    'final_score' => $grade->final_score,
+                    'final_max' => $grade->course->final_max,
+                    'total_score' => $grade->total_score,
+                    'total_max' => $grade->course->total_max,
+                    'grade' => $grade->grade,
+                ];
+            }
+        }
+
+        // Get academic history by semester
+        $academicHistory = [];
+        $semesterGPA = [];
+        $semesterCredits = [];
+        $gradeDistribution = [
+            'A+' => 0, 'A' => 0, 'A-' => 0,
+            'B+' => 0, 'B' => 0, 'B-' => 0,
+            'C+' => 0, 'C' => 0, 'C-' => 0,
+            'D+' => 0, 'D' => 0, 'F' => 0
+        ];
+
+        foreach ($student->grades as $grade) {
+            $semester = $grade->course->semester;
+            if ($semester !== $currentSemester) {
+                $academicHistory[$semester][] = [
+                    'name' => $grade->course->name,
+                    'code' => $grade->course->code,
+                    'credits' => $grade->course->credit_hours,
+                    'total_score' => $grade->total_score,
+                    'total_max' => $grade->course->total_max,
+                    'grade' => $grade->grade,
+                ];
+
+                // Calculate semester GPA and credits
+                if (!isset($semesterGPA[$semester])) {
+                    $semesterGPA[$semester] = 0;
+                    $semesterCredits[$semester] = 0;
+                }
+                $semesterGPA[$semester] += $grade->gpa * $grade->course->credit_hours;
+                $semesterCredits[$semester] += $grade->course->credit_hours;
+
+                // Update grade distribution
+                if (isset($gradeDistribution[$grade->grade])) {
+                    $gradeDistribution[$grade->grade]++;
+                }
+            }
+        }
+
+        // Calculate final semester GPAs
+        foreach ($semesterGPA as $semester => $totalPoints) {
+            $semesterGPA[$semester] = $semesterCredits[$semester] > 0 
+                ? $totalPoints / $semesterCredits[$semester] 
+                : 0;
+        }
+
+        // Calculate statistics
+        $stats = [
+            'gpa' => $student->gpa,
+            'earned_credits' => $student->earned_credits,
+            'registered_credits' => $student->registered_credits,
+            'passed_courses' => $student->grades->where('grade', '!=', 'F')->count(),
+            'failed_courses' => $student->grades->where('grade', 'F')->count(),
+            'current_courses' => count($currentCourses),
+            'attendance_rate' => 95, // You might want to calculate this from actual attendance data
+        ];
+
+        // Create new PDF document
+        $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+        // Set document information
+        $pdf->SetCreator('OTU System');
+        $pdf->SetAuthor('OTU System');
+        $pdf->SetTitle('تقرير الطالب - ' . $student->name);
+
+        // Remove default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Set margins
+        $pdf->SetMargins(15, 15, 15);
+
+        // Set auto page breaks
+        $pdf->SetAutoPageBreak(true, 15);
+
+        // Add Arabic font
+        $pdf->AddFont('DejaVuSans', '', 'DejaVuSans.ttf', true);
+        $pdf->AddFont('DejaVuSans', 'B', 'DejaVuSans-Bold.ttf', true);
+
+        // Set font
+        $pdf->SetFont('DejaVuSans', '', 12, '', true);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Set RTL direction
+        $pdf->setRTL(true);
+
+        // Create the HTML content
+        $html = view('admin.grades.student-report-pdf', compact(
+            'student',
+            'currentSemester',
+            'currentCourses',
+            'academicHistory',
+            'semesterGPA',
+            'semesterCredits',
+            'gradeDistribution',
+            'stats'
+        ))->render();
+
+        // Write HTML
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Close and output PDF document
+        return response($pdf->Output('student_report_' . $student->id . '.pdf', 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="student_report_' . $student->id . '.pdf"');
+    }
+
+    /**
+     * Export the general grades report.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function exportReport(Request $request)
+    {
+        $gradesQuery = Grade::with(['student.user', 'course']);
+        
+        if ($request->has('course')) {
+            $gradesQuery->where('course_id', $request->course);
+        }
+        
+        if ($request->has('group')) {
+            $gradesQuery->whereHas('student', function ($query) use ($request) {
+                $query->where('group_id', $request->group);
+            });
+        }
+        
+        if ($request->has('semester')) {
+            $gradesQuery->whereHas('course', function ($query) use ($request) {
+                $query->where('semester', $request->semester);
+            });
+        }
+        
+        $grades = $gradesQuery->get();
+        
+        $data = [
+            'grades' => $grades,
+            'stats' => [
+                'total_students' => Student::count(),
+                'total_courses' => Course::count(),
+                'pass_count' => $grades->where('score', '>=', 60)->count(),
+                'fail_count' => $grades->where('score', '<', 60)->count(),
+                'avg_gpa' => round($grades->avg('gpa') ?? 0, 2),
+            ],
+            'filters' => [
+                'course' => $request->course ? Course::find($request->course)->name : 'All Courses',
+                'group' => $request->group ? Group::find($request->group)->name : 'All Groups',
+                'semester' => $request->semester ?? 'All Semesters',
+            ],
+            'generated_at' => now()->format('Y-m-d H:i:s'),
+        ];
+        
+        $pdf = \PDF::loadView('admin.grades.reports-pdf', $data);
+        
+        return $pdf->download('grades-report.pdf');
+    }
+
+    /**
+     * Delete a student report
+     *
+     * @param int $id
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteStudentReport($id)
+    {
+        $student = Student::findOrFail($id);
+        
+        try {
+            // Delete student grades
+            $student->grades()->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'تم حذف تقرير الطالب بنجاح'
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'حدث خطأ أثناء حذف تقرير الطالب'
+            ], 500);
+        }
     }
 } 

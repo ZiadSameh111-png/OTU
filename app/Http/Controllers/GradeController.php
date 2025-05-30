@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class GradeController extends Controller
 {
@@ -135,7 +136,7 @@ class GradeController extends Controller
         $course = Course::with(['groups.students'])->findOrFail($courseId);
         
         // Check if the teacher is authorized to manage this course
-        if ($course->teacher_id !== $teacher->id) {
+        if (!$course->teachers()->where('users.id', $teacher->id)->exists()) {
             return redirect()->route('teacher.grades.index')->with('error', 'غير مصرح لك بإدارة درجات هذا المقرر');
         }
 
@@ -162,7 +163,7 @@ class GradeController extends Controller
         $course = Course::findOrFail($courseId);
         
         // Check if the teacher is authorized to manage this course
-        if ($course->teacher_id !== $teacher->id) {
+        if (!$course->teachers()->where('users.id', $teacher->id)->exists()) {
             return response()->json(['error' => 'غير مصرح لك بإدارة درجات هذا المقرر'], 403);
         }
 
@@ -198,9 +199,10 @@ class GradeController extends Controller
             }
             
             DB::commit();
-            return response()->json(['success' => 'تم حفظ الدرجات بنجاح']);
+            return response()->json(['success' => true, 'message' => 'تم حفظ الدرجات بنجاح']);
+            
         } catch (\Exception $e) {
-            DB::rollBack();
+            DB::rollback();
             return response()->json(['error' => $e->getMessage()], 400);
         }
     }
@@ -222,7 +224,7 @@ class GradeController extends Controller
         $course = Course::findOrFail($courseId);
         
         // Check if the teacher is authorized to manage this course
-        if ($course->teacher_id !== $teacher->id) {
+        if (!$course->teachers()->where('users.id', $teacher->id)->exists()) {
             return response()->json(['error' => 'غير مصرح لك بإدارة درجات هذا المقرر'], 403);
         }
 
@@ -445,114 +447,116 @@ class GradeController extends Controller
      * @param  int  $courseId
      * @return \Illuminate\Http\Response
      */
-    public function courseReport($courseId)
+    public function courseReport(Course $course)
     {
-        $user = Auth::user();
-        
-        // Allow both admin and teacher access
-        if ($user->hasRole('Admin')) {
-            // Admin can access all courses
-            $course = Course::with(['teacher', 'groups.students', 'grades'])->findOrFail($courseId);
-        } elseif ($user->hasRole('Teacher')) {
-            // Teacher can only access their own courses
-            $course = Course::with(['teacher', 'groups.students', 'grades'])
-                ->where('teacher_id', $user->id)
-                ->findOrFail($courseId);
-        } else {
-            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
-        }
-        
-        // Get all grades for this course, grouped by grade letter
+        $user = auth()->user();
+        if ($user->hasRole('Admin') || $course->teachers->contains($user->id)) {
+            try {
+                // Get all grades for the course with student relationship
+                $grades = Grade::with('student')->where('course_id', $course->id)->get();
+                
+                // Calculate basic statistics
+                $totalStudents = $grades->count();
+                $averageScore = $grades->avg('total') ?? 0;
+                $highestScore = $grades->max('total') ?? 0;
+                $passedCount = $grades->where('total', '>=', 60)->count();
+                $passRate = $totalStudents > 0 ? ($passedCount / $totalStudents) * 100 : 0;
+
+                // Calculate grade distribution
         $gradeDistribution = [
-            'A+' => 0, 'A' => 0, 
-            'B+' => 0, 'B' => 0, 
-            'C+' => 0, 'C' => 0, 
-            'D' => 0, 'F' => 0
-        ];
-        
-        $totalGrades = 0;
-        $submittedGrades = 0;
-        $passedGrades = 0;
-        $failedGrades = 0;
-        
-        foreach ($course->grades as $grade) {
-            $totalGrades++;
-            
-            if ($grade->submitted) {
-                $submittedGrades++;
-                $letterGrade = $grade->getLetterGradeAttribute();
-                
-                if (array_key_exists($letterGrade, $gradeDistribution)) {
-                    $gradeDistribution[$letterGrade]++;
-                }
-                
-                // Count passed/failed
-                if ($letterGrade != 'F') {
-                    $passedGrades++;
-                } else {
-                    $failedGrades++;
-                }
-            }
-        }
-        
-        // Calculate statistics for each group in this course
-        $groupStats = [];
-        foreach ($course->groups as $group) {
-            $students = $group->students;
-            $totalStudents = $students->count();
-            $groupGrades = [
-                'submitted' => 0,
-                'passed' => 0,
-                'failed' => 0,
-                'average' => 0,
-            ];
-            
-            $totalScore = 0;
-            $scoreCount = 0;
-            
-            foreach ($students as $student) {
-                $grade = Grade::where('course_id', $courseId)
-                              ->where('student_id', $student->id)
-                              ->first();
-                
-                if ($grade && $grade->submitted) {
-                    $groupGrades['submitted']++;
-                    
-                    $letterGrade = $grade->getLetterGradeAttribute();
-                    if ($letterGrade != 'F') {
-                        $groupGrades['passed']++;
-                    } else {
-                        $groupGrades['failed']++;
+                    'A' => $grades->filter(function($grade) { return $grade->total >= 90; })->count(),
+                    'B' => $grades->filter(function($grade) { return $grade->total >= 80 && $grade->total < 90; })->count(),
+                    'C' => $grades->filter(function($grade) { return $grade->total >= 70 && $grade->total < 80; })->count(),
+                    'D' => $grades->filter(function($grade) { return $grade->total >= 60 && $grade->total < 70; })->count(),
+                    'F' => $grades->filter(function($grade) { return $grade->total < 60; })->count(),
+                ];
+
+                // Calculate component averages
+                $componentAverages = [
+                    'coursework_avg' => $grades->avg('assignment_grade') ?? 0,
+                    'midterm_avg' => $grades->avg('midterm_grade') ?? 0,
+                    'final_avg' => $grades->avg('final_grade') ?? 0,
+                    'practical_avg' => $grades->avg('practical_grade') ?? 0
+                ];
+
+                // Get top performing students (top 5)
+                $topStudents = $grades->sortByDesc('total')
+                    ->take(5)
+                    ->map(function ($grade) {
+                        return [
+                            'name' => $grade->student->name,
+                            'total_percentage' => $grade->total,
+                            'grade' => $grade->getLetterGradeAttribute()
+                        ];
+                    });
+
+                // Get students at risk (below 60%)
+                $studentsAtRisk = $grades->filter(function ($grade) {
+                    return $grade->total < 60;
+                })
+                ->map(function ($grade) {
+                    return [
+                        'name' => $grade->student->name,
+                        'total_percentage' => $grade->total,
+                        'grade' => $grade->getLetterGradeAttribute()
+                    ];
+                });
+
+                // Group performance statistics
+                $groupPerformance = [];
+                foreach ($course->groups as $group) {
+                    $groupGrades = $grades->whereIn('student_id', $group->students->pluck('id'));
+                    if ($groupGrades->count() > 0) {
+                        $groupPerformance[] = [
+                            'name' => $group->name,
+                            'student_count' => $groupGrades->count(),
+                            'average_score' => $groupGrades->avg('total') ?? 0
+                        ];
                     }
-                    
-                    // Calculate average
-                    $total = $grade->assignment_grade + $grade->final_grade;
-                    $totalScore += $total;
-                    $scoreCount++;
                 }
+
+                // Define grade colors for the view
+                $gradeColors = [
+                    'A+' => 'bg-success',
+                    'A' => 'bg-success',
+                    'B+' => 'bg-info',
+                    'B' => 'bg-info',
+                    'C+' => 'bg-warning',
+                    'C' => 'bg-warning',
+                    'D+' => 'bg-danger',
+                    'D' => 'bg-danger',
+                    'F' => 'bg-dark',
+                ];
+
+                // Compile all statistics
+                $statistics = [
+                    'total_students' => $totalStudents,
+                    'average_score' => round($averageScore, 1),
+                    'highest_score' => round($highestScore, 1),
+                    'pass_rate' => round($passRate, 1),
+                    'submitted_count' => $grades->whereNotNull('total')->count(),
+                    'passed_count' => $passedCount,
+                    'failed_count' => $totalStudents - $passedCount
+                ];
+
+                return view('teacher.grades.report', compact(
+                    'course',
+                    'statistics',
+                    'gradeDistribution',
+                    'componentAverages',
+                    'groupPerformance',
+                    'topStudents',
+                    'studentsAtRisk',
+                    'gradeColors'
+                ));
+
+            } catch (\Exception $e) {
+                Log::error('Error generating course report: ' . $e->getMessage());
+                return back()->with('error', 'حدث خطأ أثناء إنشاء التقرير. يرجى المحاولة مرة أخرى.');
             }
-            
-            $groupGrades['average'] = $scoreCount > 0 ? round($totalScore / $scoreCount, 2) : 0;
-            $groupGrades['submission_rate'] = $totalStudents > 0 ? round(($groupGrades['submitted'] / $totalStudents) * 100) : 0;
-            $groupGrades['pass_rate'] = $groupGrades['submitted'] > 0 ? round(($groupGrades['passed'] / $groupGrades['submitted']) * 100) : 0;
-            
-            $groupStats[$group->id] = $groupGrades;
         }
-        
-        $stats = [
-            'total' => $totalGrades,
-            'submitted' => $submittedGrades,
-            'passed' => $passedGrades,
-            'failed' => $failedGrades,
-            'submission_rate' => $totalGrades > 0 ? round(($submittedGrades / $totalGrades) * 100) : 0,
-            'pass_rate' => $submittedGrades > 0 ? round(($passedGrades / $submittedGrades) * 100) : 0,
-            'grade_distribution' => $gradeDistribution,
-        ];
-        
-        // Determine which view to use based on user role
-        $view = $user->hasRole('Admin') ? 'admin.grades.course_report' : 'teacher.grades.report';
-        
-        return view($view, compact('course', 'stats', 'groupStats'));
+
+        return back()->with('error', 'غير مصرح لك بالوصول إلى هذا التقرير.');
     }
 
     /**
@@ -815,8 +819,6 @@ class GradeController extends Controller
             $exportData[] = $row;
         }
         
-        $fileName = 'grades_report_' . date('Ymd');
-        
         // Handle different export formats
         if ($format == 'pdf') {
             // Implementation for PDF export would go here
@@ -824,7 +826,7 @@ class GradeController extends Controller
         } elseif ($format == 'csv') {
             $headers = [
                 'Content-Type' => 'text/csv; charset=UTF-8',
-                'Content-Disposition' => 'attachment; filename="' . $fileName . '.csv"',
+                'Content-Disposition' => 'attachment; filename="grades_report_' . date('Ymd') . '.csv"',
             ];
             
             $callback = function() use ($exportData) {

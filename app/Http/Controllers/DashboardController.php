@@ -236,7 +236,10 @@ class DashboardController extends Controller
         $today = Carbon::today();
 
         // Basic statistics for teacher dashboard
-        $teacherCourses = Course::where('teacher_id', $user->id)->with('groups')->get();
+        $teacherCourses = Course::whereHas('teachers', function($query) use ($user) {
+            $query->where('users.id', $user->id);
+        })->with('groups')->get();
+        
         $teacherGroupIds = $teacherCourses->pluck('groups')->flatten()->pluck('id')->unique();
         
         $unreadMessagesCount = 0;
@@ -251,7 +254,7 @@ class DashboardController extends Controller
                     ->count();
             }
         } catch (\Exception $e) {
-            \Log::error('Error counting unread messages: ' . $e->getMessage());
+            \Log::error('Error fetching unread messages count: ' . $e->getMessage());
         }
 
         $stats = [
@@ -331,10 +334,11 @@ class DashboardController extends Controller
         }
 
         // Courses with group count for display
-        $courses = Course::where('teacher_id', $user->id)
-            ->withCount('groups')
-            ->take(5)
-            ->get();
+        $courses = Course::whereHas('teachers', function($query) use ($user) {
+            $query->where('users.id', $user->id);
+        })->withCount('groups')
+          ->take(5)
+          ->get();
 
         // Important notifications for teacher
         $notifications = [];
@@ -534,3 +538,5 @@ class DashboardController extends Controller
         ));
     }
 }
+
+

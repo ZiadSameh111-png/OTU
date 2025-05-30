@@ -31,7 +31,7 @@ return [
     | users are actually retrieved out of your database or other storage
     | mechanisms used by this application to persist your user's data.
     |
-    | Supported: "session"
+    | Supported: "session", "sanctum"
     |
     */
 
@@ -39,6 +39,12 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+        
+        'api' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+            'hash' => false,
         ],
     ],
 
@@ -107,5 +113,17 @@ return [
     */
 
     'password_timeout' => 10800,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Sanctum Token Expiration
+    |--------------------------------------------------------------------------
+    |
+    | Here you may define the amount of minutes before a Sanctum token
+    | is considered expired. If set to null, tokens won't expire.
+    |
+    */
+    
+    'sanctum_token_expiration' => 60 * 24 * 7, // One week
 
 ];

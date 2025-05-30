@@ -39,7 +39,7 @@ class GradeReportController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $courses = Course::where('teacher_id', $teacher->id)->get();
+        $courses = $teacher->courses;
         $selectedCourseId = $request->input('course_id');
         $selectedGroupId = $request->input('group_id');
         
@@ -103,9 +103,10 @@ class GradeReportController extends Controller
         
         $course = Course::findOrFail($courseId);
         
-        // Verificar que el profesor es el responsable del curso
-        if ($course->teacher_id !== $teacher->id) {
-            return redirect()->route('teacher.grades.reports')->with('error', 'غير مصرح لك بعرض هذه البيانات');
+        // Check if the teacher has access to this course
+        if (!$course->teachers->contains($teacher)) {
+            return redirect()->route('teacher.grades.reports')
+                ->with('error', 'غير مصرح لك بعرض تقارير هذا المقرر.');
         }
         
         $student = User::findOrFail($studentId);
@@ -156,9 +157,10 @@ class GradeReportController extends Controller
         
         $course = Course::findOrFail($courseId);
         
-        // Verificar que el profesor es el responsable del curso
-        if ($course->teacher_id !== $teacher->id) {
-            return redirect()->route('teacher.grades.reports')->with('error', 'غير مصرح لك بتعديل هذه البيانات');
+        // Check if the teacher has access to this course
+        if (!$course->teachers->contains($teacher)) {
+            return redirect()->route('teacher.grades.reports')
+                ->with('error', 'غير مصرح لك بعرض تقارير هذا المقرر.');
         }
         
         // Validar los datos de entrada
@@ -290,7 +292,7 @@ class GradeReportController extends Controller
                 'student_id' => $grade->student->id,
                 'student_name' => $grade->student->name,
                 'course' => $grade->course->name,
-                'teacher' => $grade->course->teacher->name,
+                'teacher' => $grade->course->teachers->count() > 0 ? $grade->course->teachers->pluck('name')->implode('، ') : 'غير محدد',
                 'online_exam_grade' => $grade->online_exam_grade,
                 'online_exam_total' => $grade->online_exam_total,
                 'paper_exam_grade' => $grade->paper_exam_grade,
@@ -322,28 +324,43 @@ class GradeReportController extends Controller
      */
     public function studentReport(Request $request)
     {
-        $student = Auth::user();
-        if (!$student->hasRole('Student')) {
+        $user = auth()->user();
+        if (!$user->hasRole('Student')) {
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $courseId = $request->input('course_id');
+        $query = Course::query();
         
-        $query = Grade::with(['course', 'course.teacher'])
-            ->where('student_id', $student->id);
-            
-        if ($courseId) {
-            $query->where('course_id', $courseId);
+        if ($user->hasRole('Teacher')) {
+            $query->whereHas('teachers', function($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
         }
         
-        $grades = $query->get();
+        $courses = $query->get();
         
-        // Obtener todos los cursos del estudiante
-        $courses = Course::whereHas('groups', function($q) use ($student) {
-            $q->where('groups.id', $student->group_id);
-        })->get();
+        if ($request->has('course_id')) {
+            $course = Course::findOrFail($request->course_id);
+            
+            if ($user->hasRole('Teacher') && !$course->teachers()->where('users.id', $user->id)->exists()) {
+                abort(403, 'Unauthorized action.');
+            }
+            
+            $courseId = $course->id;
+            
+            $query = Grade::with(['course', 'course.teacher'])
+                ->where('student_id', $user->id);
+                
+            if ($courseId) {
+                $query->where('course_id', $courseId);
+            }
+            
+            $grades = $query->get();
+            
+            return view('student.grades.report', compact('grades', 'courses', 'courseId'));
+        }
         
-        return view('student.grades.report', compact('grades', 'courses', 'courseId'));
+        return view('student.grades.report', compact('courses'));
     }
 
     /**

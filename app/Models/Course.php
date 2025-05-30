@@ -10,38 +10,39 @@ class Course extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name',
         'code',
+        'name',
         'description',
-        'teacher_id'
+        'credit_hours',
+        'semester',
+        'active'
+    ];
+
+    protected $casts = [
+        'active' => 'boolean'
     ];
 
     /**
-     * Get the schedules for the course.
+     * Get the teachers for the course.
      */
-    public function schedules()
+    public function teachers()
     {
-        return $this->hasMany(Schedule::class);
+        return $this->belongsToMany(User::class, 'course_teacher', 'course_id', 'teacher_id')
+                    ->whereHas('roles', function($query) {
+                        $query->where('name', 'Teacher');
+                    });
     }
 
     /**
-     * Get the teacher that owns the course.
-     */
-    public function teacher()
-    {
-        return $this->belongsTo(User::class, 'teacher_id');
-    }
-
-    /**
-     * The groups that belong to the course.
+     * Get the groups for the course.
      */
     public function groups()
     {
-        return $this->belongsToMany(Group::class);
+        return $this->belongsToMany(Group::class, 'course_group');
     }
 
     /**
-     * Get the grades for this course.
+     * Get the grades for the course.
      */
     public function grades()
     {
@@ -49,10 +50,18 @@ class Course extends Model
     }
 
     /**
-     * Get the exams for this course.
+     * Get the exams for the course.
      */
     public function exams()
     {
         return $this->hasMany(Exam::class);
+    }
+
+    /**
+     * Get the schedules for the course.
+     */
+    public function schedules()
+    {
+        return $this->hasMany(Schedule::class);
     }
 }

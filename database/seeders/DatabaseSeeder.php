@@ -23,12 +23,11 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             RoleSeeder::class,
-            // AdminUserSeeder::class, // Commented out as we'll use UsersTableSeeder instead
-            UsersTableSeeder::class, // Our new seeder that creates 3 users with different roles
             GroupSeeder::class,
+            AdminUserSeeder::class,
+            UsersTableSeeder::class,
+            CourseSeeder::class,
+            MessageSeeder::class,
         ]);
-
-        // Seed the courses
-        $this->call(CourseSeeder::class);
     }
 }

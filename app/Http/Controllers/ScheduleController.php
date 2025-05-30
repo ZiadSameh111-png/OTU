@@ -226,7 +226,6 @@ class ScheduleController extends Controller
      */
     public function teacherSchedule()
     {
-        // Check if user has Teacher role
         if (!Auth::user()->hasRole('Teacher')) {
             return redirect()->route('dashboard')->with('error', 'You do not have permission to view this page.');
         }
@@ -234,8 +233,10 @@ class ScheduleController extends Controller
         // Get the teacher's ID
         $teacherId = Auth::id();
 
-        // Get the teacher's courses
-        $courses = Course::where('teacher_id', $teacherId)->pluck('id');
+        // Get the teacher's courses using the many-to-many relationship
+        $courses = Course::whereHas('teachers', function($query) use ($teacherId) {
+            $query->where('users.id', $teacherId);
+        })->pluck('id');
         
         // Get schedules for these courses
         $schedules = Schedule::whereIn('course_id', $courses)

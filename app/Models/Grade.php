@@ -17,17 +17,16 @@ class Grade extends Model
     protected $fillable = [
         'student_id',
         'course_id',
-        'online_exam_grade',
-        'online_exam_total',
-        'paper_exam_grade',
-        'paper_exam_total',
-        'practical_grade',
-        'practical_total',
-        'total_grade',
-        'total_possible',
-        'is_final',
+        'midterm_grade',
+        'assignment_grade',
+        'final_grade',
+        'score',
+        'gpa',
+        'grade',
+        'submitted',
+        'submission_date',
         'updated_by',
-        'comments',
+        'comments'
     ];
 
     /**
@@ -36,15 +35,13 @@ class Grade extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'online_exam_grade' => 'float',
-        'online_exam_total' => 'float',
-        'paper_exam_grade' => 'float',
-        'paper_exam_total' => 'float',
-        'practical_grade' => 'float',
-        'practical_total' => 'float',
-        'total_grade' => 'float',
-        'total_possible' => 'float',
-        'is_final' => 'boolean',
+        'midterm_grade' => 'decimal:2',
+        'assignment_grade' => 'decimal:2',
+        'final_grade' => 'decimal:2',
+        'score' => 'decimal:2',
+        'gpa' => 'decimal:2',
+        'submitted' => 'boolean',
+        'submission_date' => 'datetime',
     ];
 
     /**
@@ -287,5 +284,68 @@ class Grade extends Model
     public function scopeNotFinalized($query)
     {
         return $query->where('is_final', false);
+    }
+
+    /**
+     * Calculate and update the total score and letter grade.
+     */
+    public function calculateScore()
+    {
+        $midterm = $this->midterm_grade ?? 0;
+        $assignment = $this->assignment_grade ?? 0;
+        $final = $this->final_grade ?? 0;
+
+        // Calculate total score (assuming equal weights, adjust as needed)
+        $this->score = ($midterm * 0.3) + ($assignment * 0.3) + ($final * 0.4);
+
+        // Calculate letter grade
+        $this->grade = $this->calculateLetterGrade($this->score);
+        
+        // Calculate GPA
+        $this->gpa = $this->calculateGPA($this->grade);
+
+        return $this;
+    }
+
+    /**
+     * Calculate letter grade based on score.
+     */
+    protected function calculateLetterGrade($score)
+    {
+        if ($score >= 95) return 'A+';
+        if ($score >= 90) return 'A';
+        if ($score >= 85) return 'A-';
+        if ($score >= 80) return 'B+';
+        if ($score >= 75) return 'B';
+        if ($score >= 70) return 'B-';
+        if ($score >= 65) return 'C+';
+        if ($score >= 60) return 'C';
+        if ($score >= 55) return 'C-';
+        if ($score >= 50) return 'D+';
+        if ($score >= 45) return 'D';
+        return 'F';
+    }
+
+    /**
+     * Calculate GPA based on letter grade.
+     */
+    protected function calculateGPA($grade)
+    {
+        $gpaScale = [
+            'A+' => 4.00,
+            'A'  => 4.00,
+            'A-' => 3.70,
+            'B+' => 3.30,
+            'B'  => 3.00,
+            'B-' => 2.70,
+            'C+' => 2.30,
+            'C'  => 2.00,
+            'C-' => 1.70,
+            'D+' => 1.30,
+            'D'  => 1.00,
+            'F'  => 0.00,
+        ];
+
+        return $gpaScale[$grade] ?? 0.00;
     }
 }

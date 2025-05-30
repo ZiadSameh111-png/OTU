@@ -21,14 +21,24 @@ use App\Http\Controllers\Student\GradeController as StudentGradeController;
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
+| This application is primarily an API backend, so these web routes
+| are minimal and serve only as fallbacks or redirects to the API.
 |
 */
 
+// Welcome page with API information
 Route::get('/', function () {
-    return redirect()->route('login');
+    return view('welcome');
+});
+
+// Redirect auth routes to API equivalents
+Route::get('/login', function () {
+    return redirect('/api/login');
+});
+
+// Fallback for all other routes - 404 page or API info
+Route::fallback(function () {
+    return response()->view('welcome', [], 404);
 });
 
 Auth::routes();
@@ -41,10 +51,16 @@ Route::redirect('/home', '/dashboard');
 Route::middleware(['auth'])->group(function () {
     // User management routes - only accessible by admin
     Route::middleware(['role:Admin'])->group(function () {
+        // Admin Dashboard
+        Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
+        
         Route::resource('users', App\Http\Controllers\UserController::class);
         
         // Group management routes
         Route::resource('groups', App\Http\Controllers\GroupController::class);
+        
+        // Location management routes
+        Route::resource('locations', App\Http\Controllers\Admin\LocationSettingController::class)->names('admin.locations');
         
         // مسار مباشر لإدارة المقررات للمسؤول
         Route::get('/admin/courses', [App\Http\Controllers\CourseController::class, 'adminCourses'])->name('admin.courses');
@@ -106,11 +122,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/teachers', [App\Http\Controllers\UserController::class, 'teachers'])->name('admin.teachers');
         Route::get('/admin/groups', [App\Http\Controllers\GroupController::class, 'index'])->name('admin.groups');
         
+        // Student Notes Management Routes
+        Route::post('/admin/student/{student}/notes', [App\Http\Controllers\Admin\StudentNoteController::class, 'store'])->name('admin.student.add_note');
+        Route::put('/admin/student/notes/{note}', [App\Http\Controllers\Admin\StudentNoteController::class, 'update'])->name('admin.student.edit_note');
+        Route::delete('/admin/student/notes/{note}', [App\Http\Controllers\Admin\StudentNoteController::class, 'destroy'])->name('admin.student.delete_note');
+        
         // Grades Reports Routes
-        Route::get('/admin/grades/reports', [App\Http\Controllers\GradeController::class, 'adminReports'])->name('admin.grades.reports');
-        Route::get('/admin/grades/course/{course}', [App\Http\Controllers\GradeController::class, 'courseReport'])->name('admin.grades.course.report');
-        Route::get('/admin/grades/group/{group}', [App\Http\Controllers\GradeController::class, 'groupReport'])->name('admin.grades.group.report');
-        Route::get('/admin/grades/export/course/{course}/{format?}', [App\Http\Controllers\GradeController::class, 'exportCourseGrades'])->name('admin.grades.export.course');
+        Route::get('/admin/grades/reports', [GradeReportsController::class, 'index'])->name('admin.grades.reports');
+        Route::get('/admin/grades/course-report/{id}', [GradeReportsController::class, 'courseReport'])->name('admin.grades.course_report');
+        Route::get('/admin/grades/student-report/{id}', [GradeReportsController::class, 'studentReport'])->name('admin.grades.student_report');
+        Route::get('/admin/grades/export-course-report/{id}', [GradeReportsController::class, 'exportCourseReport'])->name('admin.grades.export_course_report');
+        Route::get('/admin/grades/export-student-report/{id}', [GradeReportsController::class, 'exportStudentReport'])->name('admin.grades.export_student_report');
+        Route::get('/admin/grades/export-report', [GradeReportsController::class, 'exportReport'])->name('admin.grades.export_report');
+        Route::delete('/admin/grades/student-report/{id}', [GradeReportsController::class, 'deleteStudentReport'])->name('admin.grades.delete_report');
 
         // Exams Report Routes for Admin
         Route::get('/admin/exams', [AdminExamController::class, 'index'])->name('admin.exams.index');
@@ -172,7 +196,15 @@ Route::middleware(['auth'])->group(function () {
     // روابط عرض المقررات للمدرسين - متاحة للمدرسين فقط
     Route::middleware(['role:Teacher'])->group(function () {
         Route::get('/teacher/courses', [App\Http\Controllers\CourseController::class, 'teacherCourses'])->name('courses.teacher');
+        Route::get('/teacher/courses/{course}', [App\Http\Controllers\CourseController::class, 'teacherShow'])->name('courses.teacher.show');
         Route::get('/teacher/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('teacher.dashboard');
+        
+        // Teacher Grades Routes
+        Route::get('/teacher/grades', [GradeController::class, 'teacherIndex'])->name('teacher.grades.index');
+        Route::get('/teacher/grades/students/{course}', [GradeController::class, 'manageCourse'])->name('teacher.grades.students');
+        Route::get('/teacher/grades/export/{course}', [GradeController::class, 'exportCourseGrades'])->name('teacher.grades.export.report');
+        Route::post('/teacher/grades/store', [GradeController::class, 'store'])->name('teacher.grades.store');
+        Route::post('/teacher/grades/submit', [GradeController::class, 'submit'])->name('teacher.grades.submit');
         
         // Teacher message routes
         Route::get('/teacher/messages', [App\Http\Controllers\MessageController::class, 'teacherIndex'])->name('teacher.messages');
@@ -194,6 +226,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/teacher/attendance/create', [App\Http\Controllers\StudentAttendanceController::class, 'create'])->name('teacher.attendance.create');
         Route::post('/teacher/attendance', [App\Http\Controllers\StudentAttendanceController::class, 'store'])->name('teacher.attendance.store');
         Route::get('/teacher/attendance/{attendance}', [App\Http\Controllers\StudentAttendanceController::class, 'show'])->name('teacher.attendance.show');
+        Route::get('/teacher/attendance/select', [App\Http\Controllers\StudentAttendanceController::class, 'index'])->name('teacher.attendance.select');
+        Route::get('/teacher/attendance/report/course/{course}', [App\Http\Controllers\StudentAttendanceController::class, 'courseReport'])->name('teacher.attendance.report.course');
+        Route::get('/teacher/attendance/report/student', [App\Http\Controllers\StudentAttendanceController::class, 'studentReport'])->name('teacher.attendance.report.student');
+        Route::get('/teacher/attendance/report/date', [App\Http\Controllers\StudentAttendanceController::class, 'dateReport'])->name('teacher.attendance.report.date');
         
         // Grades Management Routes
         Route::get('/teacher/grades', [App\Http\Controllers\GradeController::class, 'index'])->name('teacher.grades.index');
@@ -337,32 +373,20 @@ Route::get('/generate-admin-user', function () {
 });
 
 // Admin Routes
-Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
-    // ... existing code ...
-
-    // Grades
-    Route::get('/grades/reports', [GradeController::class, 'adminReports'])->name('grades.reports');
-    Route::get('/grades/export/{format?}', [GradeController::class, 'export'])->name('grades.export');
-    Route::get('/grades/{id}/edit', [GradeController::class, 'edit'])->name('grades.edit');
-    Route::put('/grades/{id}', [GradeController::class, 'update'])->name('grades.update');
-    Route::get('/courses/{courseId}/report', [GradeController::class, 'courseReport'])->name('courses.report');
-    Route::get('/courses/{courseId}/export/{format?}', [GradeController::class, 'exportCourseGrades'])->name('courses.export');
-
-    // Location Settings
-    Route::get('/locations', [App\Http\Controllers\Admin\LocationSettingController::class, 'index'])->name('locations.index');
-    Route::get('/locations/create', [App\Http\Controllers\Admin\LocationSettingController::class, 'create'])->name('locations.create');
-    Route::post('/locations', [App\Http\Controllers\Admin\LocationSettingController::class, 'store'])->name('locations.store');
-    Route::get('/locations/{location}/edit', [App\Http\Controllers\Admin\LocationSettingController::class, 'edit'])->name('locations.edit');
-    Route::put('/locations/{location}', [App\Http\Controllers\Admin\LocationSettingController::class, 'update'])->name('locations.update');
-    Route::delete('/locations/{location}', [App\Http\Controllers\Admin\LocationSettingController::class, 'destroy'])->name('locations.destroy');
-
-    // Exam Reports
-    Route::get('/exams/reports', [App\Http\Controllers\ExamController::class, 'adminReportsIndex'])->name('exams.reports');
-    Route::get('/exams/reports/{id}', [App\Http\Controllers\ExamController::class, 'adminReportShow'])->name('exams.reports.show');
-    Route::get('/exams/reports/{id}/export/{format?}', [App\Http\Controllers\ExamController::class, 'exportResults'])->name('exams.reports.export');
-    Route::get('/exams/reports/{examId}/student/{studentId}', [App\Http\Controllers\ExamController::class, 'viewStudentAttempt'])->name('exams.reports.student');
-
-    // ... existing code ...
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    // Grades Reports Routes
+    Route::prefix('grades')->name('grades.')->group(function () {
+        Route::get('/', [GradeReportsController::class, 'index'])->name('reports');
+        Route::get('/index', [GradeController::class, 'adminIndex'])->name('index');
+        Route::get('/course-report/{id}', [GradeReportsController::class, 'courseReport'])->name('course_report');
+        Route::get('/student-report/{id}', [GradeReportsController::class, 'studentReport'])->name('student_report');
+        Route::delete('/student-report/{id}', [GradeReportsController::class, 'deleteStudentReport'])->name('delete_report');
+        Route::get('/export/course/{id}', [GradeReportsController::class, 'exportCourseReport'])->name('course.export');
+        Route::get('/export/student/{id}', [GradeReportsController::class, 'exportStudentReport'])->name('student.export');
+        Route::get('/export', [GradeReportsController::class, 'exportReport'])->name('export');
+        Route::get('edit/{id}', [GradeController::class, 'edit'])->name('edit');
+        Route::put('update/{id}', [GradeController::class, 'update'])->name('update');
+    });
 });
 
 // Student Routes
@@ -436,13 +460,6 @@ Route::group(['middleware' => ['auth', 'teacher'], 'prefix' => 'teacher', 'as' =
     Route::post('/grades/update-online-grades', [GradeReportController::class, 'updateAllOnlineGrades'])->name('grades.update-online');
 });
 
-// Admin Grades Routes
-Route::group(['middleware' => ['auth', 'admin'], 'prefix' => 'admin', 'as' => 'admin.'], function () {
-    // Grade Reports
-    Route::get('/grades/reports', [GradeReportController::class, 'adminReportsIndex'])->name('grades.reports');
-    Route::get('/grades/reports/export/{format?}', [GradeReportController::class, 'exportGrades'])->name('grades.export');
-});
-
 // Student Grades Routes
 Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' => 'student.'], function () {
     // Grade Reports
@@ -453,15 +470,6 @@ Route::group(['middleware' => ['auth', 'student'], 'prefix' => 'student', 'as' =
 // Shared Grade Routes
 Route::group(['middleware' => ['auth'], 'prefix' => 'grades', 'as' => 'grades.'], function () {
     Route::get('/exam/{attemptId}/detail', [GradeReportController::class, 'viewExamDetail'])->name('exam-detail');
-});
-
-// Admin Grade Reports Routes
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/grades/reports', [Admin\GradeReportsController::class, 'index'])->name('admin.grades.reports');
-    Route::get('/admin/grades/course-report/{id}', [Admin\GradeReportsController::class, 'courseReport'])->name('admin.grades.course_report');
-    Route::get('/admin/grades/student-report/{id}', [Admin\GradeReportsController::class, 'studentReport'])->name('admin.grades.student_report');
-    Route::get('/admin/grades/export-course-report/{id}', [Admin\GradeReportsController::class, 'exportCourseReport'])->name('admin.grades.export_course_report');
-    Route::get('/admin/grades/export-student-report/{id}', [Admin\GradeReportsController::class, 'exportStudentReport'])->name('admin.grades.export_student_report');
 });
 
 // Student Grades Report Route

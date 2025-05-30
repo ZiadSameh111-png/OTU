@@ -32,7 +32,7 @@ class GradeController extends Controller
      */
     public function report()
     {
-        $student = Student::with(['grades.course.teacher'])->where('user_id', Auth::id())->firstOrFail();
+        $student = Student::with(['grades.course.teachers'])->where('user_id', Auth::id())->firstOrFail();
         
         // Calculate GPA
         $gpa = $student->grades->avg('gpa') ?? 0;
@@ -65,7 +65,7 @@ class GradeController extends Controller
                 'code' => $course->code,
                 'type' => $course->type ?? 'core',
                 'credits' => $course->credits ?? 3,
-                'instructor' => optional($course->teacher)->name ?? 'غير محدد',
+                'instructor' => $course->teachers->count() > 0 ? $course->teachers->pluck('name')->implode('، ') : 'غير محدد',
                 'assignment_score' => $assignmentScore,
                 'assignment_max' => $assignmentMax,
                 'assignment_percentage' => $assignmentPercentage,
@@ -108,7 +108,7 @@ class GradeController extends Controller
                 'code' => $grade->course->code,
                 'type' => $grade->course->type ?? 'core',
                 'credits' => $grade->course->credits ?? 3,
-                'instructor' => optional($grade->course->teacher)->name ?? 'غير محدد',
+                'instructor' => $grade->course->teachers->count() > 0 ? $grade->course->teachers->pluck('name')->implode('، ') : 'غير محدد',
                 'total_score' => $grade->score,
                 'total_max' => $grade->course->total_grade ?? 100,
                 'total_percentage' => ($grade->score / ($grade->course->total_grade ?? 100)) * 100,

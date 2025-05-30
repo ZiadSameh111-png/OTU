@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use App\Models\Group;
+use Illuminate\Support\Facades\DB;
 
 class GroupSeeder extends Seeder
 {
@@ -15,34 +14,28 @@ class GroupSeeder extends Seeder
      */
     public function run()
     {
-        // إنشاء مجموعات نموذجية
-        $groups = [
+        // Insert groups without timestamps
+        DB::table('groups')->insert([
             [
                 'name' => 'مجموعة هندسة البرمجيات',
                 'description' => 'مجموعة متخصصة في هندسة البرمجيات والتطوير',
-                'active' => true
+                'active' => true,
             ],
             [
                 'name' => 'مجموعة تطوير الويب',
                 'description' => 'مجموعة متخصصة في تطوير تطبيقات الويب',
-                'active' => true
+                'active' => true,
             ],
             [
                 'name' => 'مجموعة الذكاء الاصطناعي',
                 'description' => 'مجموعة متخصصة في الذكاء الاصطناعي وتعلم الآلة',
-                'active' => true
+                'active' => true,
             ],
             [
                 'name' => 'مجموعة تحليل البيانات',
                 'description' => 'مجموعة متخصصة في علم البيانات وتحليلها',
-                'active' => false
-            ]
-        ];
-
-        foreach ($groups as $groupData) {
-            Group::create($groupData);
-        }
-
-        $this->command->info('تم إنشاء المجموعات النموذجية بنجاح');
+                'active' => false,
+            ],
+        ]);
     }
 }

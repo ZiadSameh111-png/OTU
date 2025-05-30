@@ -31,7 +31,7 @@ class CourseController extends Controller
         $user = Auth::user();
 
         if ($user->hasRole('Admin')) {
-            $courses = Course::with(['teacher', 'groups'])->get();
+            $courses = Course::with(['teachers', 'groups'])->get();
             return view('admin.courses.index', compact('courses'));
         } elseif ($user->hasRole('Teacher')) {
             $courses = $user->teacherCourses()->with('groups')->get();
@@ -54,7 +54,7 @@ class CourseController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بعرض هذه الصفحة.');
         }
         
-        $courses = Course::with(['teacher', 'groups'])->get();
+        $courses = Course::with(['teachers', 'groups'])->get();
         
         return view('admin.courses.index', compact('courses'));
     }
@@ -125,6 +125,8 @@ class CourseController extends Controller
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:20|unique:courses',
             'description' => 'nullable|string',
+            'semester' => 'required|string|max:20',
+            'credit_hours' => 'required|integer|min:1|max:6',
             'teacher_id' => 'nullable|exists:users,id',
             'groups' => 'nullable|array',
             'groups.*' => 'exists:groups,id',
@@ -134,8 +136,15 @@ class CourseController extends Controller
             'name' => $request->name,
             'code' => $request->code,
             'description' => $request->description,
-            'teacher_id' => $request->teacher_id,
+            'semester' => $request->semester,
+            'credit_hours' => $request->credit_hours,
+            'active' => true,
         ]);
+
+        // Assign teacher to course using course_teacher pivot table
+        if ($request->teacher_id) {
+            $course->teachers()->attach($request->teacher_id);
+        }
 
         // ربط المقرر بالمجموعات المحددة
         if ($request->has('groups')) {
@@ -154,13 +163,13 @@ class CourseController extends Controller
      */
     public function show(Course $course)
     {
-        $course->load(['teacher', 'groups']);
+        $course->load(['teachers', 'groups']);
         
         $user = Auth::user();
         
         if ($user->hasRole('Admin')) {
             return view('admin.courses.show', compact('course'));
-        } elseif ($user->hasRole('Teacher') && $course->teacher_id == $user->id) {
+        } elseif ($user->hasRole('Teacher') && $course->teachers->contains($user)) {
             return view('teacher.courses.show', compact('course'));
         } elseif ($user->hasRole('Student') && $user->group && $course->groups->contains($user->group)) {
             return view('student.courses.show', compact('course'));
@@ -204,6 +213,8 @@ class CourseController extends Controller
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:20|unique:courses,code,' . $course->id,
             'description' => 'nullable|string',
+            'semester' => 'required|string|max:20',
+            'credit_hours' => 'required|integer|min:1|max:6',
             'teacher_id' => 'nullable|exists:users,id',
             'groups' => 'nullable|array',
             'groups.*' => 'exists:groups,id',
@@ -213,8 +224,16 @@ class CourseController extends Controller
             'name' => $request->name,
             'code' => $request->code,
             'description' => $request->description,
-            'teacher_id' => $request->teacher_id,
+            'semester' => $request->semester,
+            'credit_hours' => $request->credit_hours,
         ]);
+
+        // Update teacher assignment
+        if ($request->teacher_id) {
+            $course->teachers()->sync([$request->teacher_id]);
+        } else {
+            $course->teachers()->detach();
+        }
 
         // تحديث العلاقات مع المجموعات
         if ($request->has('groups')) {
@@ -262,8 +281,27 @@ class CourseController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بعرض هذه الصفحة.');
         }
         
-        $course->load(['teacher', 'groups']);
+        $course->load(['teachers', 'groups']);
         
         return view('admin.courses.show', compact('course'));
+    }
+
+    public function teacherShow(Course $course)
+    {
+        $user = Auth::user();
+        
+        if (!$user->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بعرض هذه الصفحة.');
+        }
+        
+        // Check if the teacher is assigned to this course
+        if (!$course->teachers->contains($user)) {
+            return redirect()->route('courses.teacher')->with('error', 'غير مصرح لك بعرض هذا المقرر.');
+        }
+        
+        // Load related data
+        $course->load(['groups', 'schedules']);
+        
+        return view('teacher.courses.show', compact('course'));
     }
 }

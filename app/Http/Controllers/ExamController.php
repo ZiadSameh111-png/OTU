@@ -25,11 +25,13 @@ class ExamController extends Controller
      */
     public function teacherIndex()
     {
-        $teacher = Auth::user();
-        $exams = Exam::where('teacher_id', $teacher->id)
-            ->with(['course', 'group'])
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $teacher = auth()->user();
+        $exams = Exam::whereHas('course.teachers', function($query) use ($teacher) {
+            $query->where('users.id', $teacher->id);
+        })
+        ->with(['course', 'questions'])
+        ->orderBy('created_at', 'desc')
+        ->get();
 
         return view('teacher.exams.index', compact('exams'));
     }
@@ -41,17 +43,21 @@ class ExamController extends Controller
      */
     public function create()
     {
-        $teacher = Auth::user();
-        $courses = $teacher->teacherCourses()->get();
+        $user = auth()->user();
+        $query = Course::query();
         
-        // Get all groups associated with the teacher's courses
-        $groupIds = [];
-        foreach ($courses as $course) {
-            $courseGroups = $course->groups()->pluck('groups.id')->toArray();
-            $groupIds = array_merge($groupIds, $courseGroups);
+        if ($user->hasRole('Teacher')) {
+            $query->whereHas('teachers', function($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
         }
         
-        $groups = Group::whereIn('id', $groupIds)->get();
+        $courses = $query->get();
+        
+        // Get groups for the courses
+        $groups = Group::whereHas('courses', function($query) use ($courses) {
+            $query->whereIn('courses.id', $courses->pluck('id'));
+        })->get();
         
         return view('teacher.exams.create', compact('courses', 'groups'));
     }
@@ -64,6 +70,13 @@ class ExamController extends Controller
      */
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $course = Course::findOrFail($request->course_id);
+        
+        if ($user->hasRole('Teacher') && !$course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'course_id' => 'required|exists:courses,id',
@@ -78,14 +91,6 @@ class ExamController extends Controller
                 ->withInput();
         }
 
-        // Check if the teacher is associated with the course
-        $course = Course::find($request->course_id);
-        if ($course->teacher_id != Auth::id()) {
-            return redirect()->back()
-                ->with('error', 'غير مصرح لك بإنشاء اختبار لهذا المقرر')
-                ->withInput();
-        }
-
         // Check if the group is associated with the course
         $groupExists = $course->groups()->where('groups.id', $request->group_id)->exists();
         if (!$groupExists) {
@@ -95,13 +100,9 @@ class ExamController extends Controller
         }
 
         // Create the exam
-        $exam = new Exam();
-        $exam->title = $request->title;
-        $exam->course_id = $request->course_id;
-        $exam->group_id = $request->group_id;
+        $exam = new Exam($request->all());
+        $exam->course_id = $course->id;
         $exam->teacher_id = Auth::id();
-        $exam->duration = $request->duration;
-        $exam->question_type = $request->question_type;
         $exam->status = 'pending';
         $exam->is_published = false;
         $exam->is_open = false;
@@ -119,15 +120,26 @@ class ExamController extends Controller
      */
     public function edit($id)
     {
-        $exam = Exam::with('questions')->findOrFail($id);
+        $exam = Exam::with(['questions' => function($query) {
+            $query->orderBy('order');
+        }])->findOrFail($id);
         
-        // Check if the teacher is authorized to edit this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بتعديل هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
-        return view('teacher.exams.edit', compact('exam'));
+        $query = Course::query();
+        
+        if ($user->hasRole('Teacher')) {
+            $query->whereHas('teachers', function($q) use ($user) {
+                $q->where('users.id', $user->id);
+            });
+        }
+        
+        $courses = $query->get();
+        return view('teacher.exams.edit', compact('exam', 'courses'));
     }
 
     /**
@@ -141,10 +153,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($examId);
         
-        // Check if the teacher is authorized to edit this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بتعديل هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
 
         // Validate that the exam is not published
@@ -214,14 +226,12 @@ class ExamController extends Controller
      */
     public function getQuestionData($questionId)
     {
-        $question = ExamQuestion::findOrFail($questionId);
+        $question = ExamQuestion::with('exam')->findOrFail($questionId);
         
-        // Check if the teacher is authorized to edit this question
-        if ($question->exam->teacher_id != Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'غير مصرح لك بتعديل هذا السؤال'
-            ], 403);
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$question->exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam is published
@@ -247,13 +257,12 @@ class ExamController extends Controller
      */
     public function updateQuestion(Request $request, $questionId)
     {
-        $question = ExamQuestion::findOrFail($questionId);
-        $exam = $question->exam;
+        $exam = Exam::findOrFail($request->exam_id);
         
-        // Check if the teacher is authorized to edit this question
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بتعديل هذا السؤال');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam is published
@@ -261,6 +270,8 @@ class ExamController extends Controller
             return redirect()->back()
                 ->with('error', 'لا يمكن تعديل أسئلة اختبار تم نشره بالفعل');
         }
+        
+        $question = ExamQuestion::findOrFail($questionId);
         
         $questionType = $question->question_type; // We don't allow changing the question type
         
@@ -311,18 +322,18 @@ class ExamController extends Controller
     /**
      * Remove a question from an exam.
      *
+     * @param  \Illuminate\Http\Request  $request
      * @param  int  $questionId
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function removeQuestion($questionId)
+    public function removeQuestion(Request $request, $questionId)
     {
-        $question = ExamQuestion::findOrFail($questionId);
-        $exam = $question->exam;
+        $exam = Exam::findOrFail($request->exam_id);
         
-        // Check if the teacher is authorized to edit this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بحذف هذا السؤال');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam is published
@@ -332,6 +343,7 @@ class ExamController extends Controller
         }
         
         // Delete the question
+        $question = ExamQuestion::findOrFail($questionId);
         $question->delete();
         
         // Update the total marks for the exam
@@ -362,10 +374,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($examId);
         
-        // Check if the teacher is authorized to edit this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بحذف أسئلة هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam is published
@@ -396,12 +408,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($examId);
         
-        // Check if the teacher is authorized to edit this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'غير مصرح لك بتعديل هذا الاختبار'
-            ], 403);
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam is published
@@ -456,10 +466,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         
-        // Check if the teacher is authorized to publish this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بنشر هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if the exam has questions
@@ -486,10 +496,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         
-        // Check if the teacher is authorized to unpublish this exam
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بإلغاء نشر هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // Check if any students have already attempted the exam
@@ -911,11 +921,13 @@ class ExamController extends Controller
         $courseId = $request->input('course_id');
         
         // Get courses taught by this teacher
-        $courses = Course::where('teacher_id', $teacher->id)->get();
+        $courses = Course::whereHas('teachers', function($query) use ($teacher) {
+            $query->where('users.id', $teacher->id);
+        })->get();
         
         $query = StudentExamAttempt::with(['exam', 'student', 'exam.questions'])
-            ->whereHas('exam', function ($q) use ($teacher) {
-                $q->where('teacher_id', $teacher->id);
+            ->whereHas('exam.course.teachers', function ($q) use ($teacher) {
+                $q->where('users.id', $teacher->id);
             })
             ->whereIn('status', ['pending_review', 'submitted']);
             
@@ -951,8 +963,8 @@ class ExamController extends Controller
         
         // Statistics
         $stats = [
-            'pending' => StudentExamAttempt::whereHas('exam', function ($q) use ($teacher) {
-                $q->where('teacher_id', $teacher->id);
+            'pending' => StudentExamAttempt::whereHas('exam.course.teachers', function ($q) use ($teacher) {
+                $q->where('users.id', $teacher->id);
             })
             ->where(function($q) {
                 $q->where('status', 'pending_review')
@@ -966,8 +978,8 @@ class ExamController extends Controller
             })
             ->count(),
             
-            'in_progress' => StudentExamAttempt::whereHas('exam', function ($q) use ($teacher) {
-                $q->where('teacher_id', $teacher->id);
+            'in_progress' => StudentExamAttempt::whereHas('exam.course.teachers', function ($q) use ($teacher) {
+                $q->where('users.id', $teacher->id);
             })
             ->whereIn('status', ['pending_review', 'submitted'])
             ->where('is_graded', false)
@@ -976,8 +988,8 @@ class ExamController extends Controller
             })
             ->count(),
             
-            'completed' => StudentExamAttempt::whereHas('exam', function ($q) use ($teacher) {
-                $q->where('teacher_id', $teacher->id);
+            'completed' => StudentExamAttempt::whereHas('exam.course.teachers', function ($q) use ($teacher) {
+                $q->where('users.id', $teacher->id);
             })
             ->where('status', 'submitted')
             ->where('is_graded', true)
@@ -998,7 +1010,7 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($id);
         
         // Check if the teacher is authorized to grade this exam
-        if ($exam->teacher_id != Auth::id()) {
+        if (!$exam->course->teachers()->where('users.id', Auth::id())->exists()) {
             return redirect()->route('teacher.exams.grading')
                 ->with('error', 'غير مصرح لك بتصحيح هذا الاختبار');
         }
@@ -1027,7 +1039,7 @@ class ExamController extends Controller
         }])->findOrFail($examId);
         
         // Check if the teacher is authorized to grade this exam
-        if ($exam->teacher_id != Auth::id()) {
+        if (!$exam->course->teachers()->where('users.id', Auth::id())->exists()) {
             return redirect()->route('teacher.exams.grading')
                 ->with('error', 'غير مصرح لك بتصحيح هذا الاختبار');
         }
@@ -1065,7 +1077,7 @@ class ExamController extends Controller
         $exam = Exam::findOrFail($examId);
         
         // Check if the teacher is authorized to grade this exam
-        if ($exam->teacher_id != Auth::id()) {
+        if (!$exam->course->teachers()->where('users.id', Auth::id())->exists()) {
             return redirect()->route('teacher.exams.grading')
                 ->with('error', 'غير مصرح لك بتصحيح هذا الاختبار');
         }
@@ -1375,10 +1387,10 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         
-        // التحقق من أن المدرس هو صاحب الاختبار
-        if ($exam->teacher_id != Auth::id()) {
-            return redirect()->route('teacher.exams.index')
-                ->with('error', 'غير مصرح لك بحذف هذا الاختبار');
+        $user = auth()->user();
+        
+        if ($user->hasRole('Teacher') && !$exam->course->teachers()->where('users.id', $user->id)->exists()) {
+            abort(403, 'Unauthorized action.');
         }
         
         // التحقق من عدم وجود محاولات للطلاب إذا كان الاختبار منشور
@@ -1407,8 +1419,8 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         
-        // Check if the teacher is authorized
-        if ($exam->teacher_id != Auth::id()) {
+        // Check if the teacher is authorized to open this exam
+        if (!$exam->course->teachers()->where('users.id', Auth::id())->exists()) {
             return redirect()->route('teacher.exams.index')
                 ->with('error', 'غير مصرح لك بفتح هذا الاختبار');
         }
@@ -1436,8 +1448,8 @@ class ExamController extends Controller
     {
         $exam = Exam::findOrFail($id);
         
-        // Check if the teacher is authorized
-        if ($exam->teacher_id != Auth::id()) {
+        // Check if the teacher is authorized to close this exam
+        if (!$exam->course->teachers()->where('users.id', Auth::id())->exists()) {
             return redirect()->route('teacher.exams.index')
                 ->with('error', 'غير مصرح لك بإغلاق هذا الاختبار');
         }

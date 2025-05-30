@@ -3,42 +3,34 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Role;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class AdminUserSeeder extends Seeder
 {
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
     public function run()
     {
-        // تحقق من وجود مستخدم مدير قبل الإنشاء
-        $adminEmail = 'admin@otu.edu';
-        $existingAdmin = User::where('email', $adminEmail)->first();
-        
-        if (!$existingAdmin) {
-            // الحصول على دور المدير
-            $adminRole = Role::where('name', 'Admin')->first();
-            
-            if (!$adminRole) {
-                $this->command->error('دور المدير (Admin) غير موجود في النظام!');
-                return;
-            }
-            
-            // إنشاء مستخدم مدير جديد
-            $admin = User::create([
-                'name' => 'مدير النظام',
-                'email' => $adminEmail,
-                'password' => Hash::make('password123'),
+        // Create admin user
+        $userId = DB::table('users')->insertGetId([
+            'name' => 'مدير النظام',
+            'email' => 'admin@otu.edu',
+            'password' => Hash::make('password123'),
+        ]);
+
+        // Get admin role ID
+        $adminRoleId = DB::table('roles')->where('name', 'Admin')->value('id');
+
+        // Assign admin role to user
+        if ($adminRoleId) {
+            DB::table('role_user')->insert([
+                'user_id' => $userId,
+                'role_id' => $adminRoleId,
             ]);
-            
-            // تعيين دور المدير للمستخدم
-            $admin->roles()->attach($adminRole);
-            
-            $this->command->info('تم إنشاء حساب المدير بنجاح:');
-            $this->command->info('البريد الإلكتروني: ' . $adminEmail);
-            $this->command->info('كلمة المرور: password123');
-        } else {
-            $this->command->line('حساب المدير موجود بالفعل: ' . $adminEmail);
         }
     }
 } 

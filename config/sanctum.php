@@ -46,7 +46,7 @@ return [
     |
     */
 
-    'expiration' => null,
+    'expiration' => 60 * 24 * 7, // 1 week
 
     /*
     |--------------------------------------------------------------------------
@@ -63,5 +63,18 @@ return [
         'verify_csrf_token' => App\Http\Middleware\VerifyCsrfToken::class,
         'encrypt_cookies' => App\Http\Middleware\EncryptCookies::class,
     ],
+    
+    /*
+    |--------------------------------------------------------------------------
+    | Token Prefix
+    |--------------------------------------------------------------------------
+    |
+    | Specify the prefix that will be prepended to the token when it is stored.
+    | This prefix is helpful when you want to have multiple applications using
+    | Sanctum.
+    |
+    */
+    
+    'token_prefix' => env('SANCTUM_TOKEN_PREFIX', 'otu_pat_'),
 
 ];

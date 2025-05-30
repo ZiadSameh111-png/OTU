@@ -20,7 +20,7 @@ return new class extends Migration
             $table->string('type')->default('other');
             $table->text('details')->nullable();
             $table->string('priority')->default('normal');
-            $table->timestamp('request_date')->default(now());
+            $table->timestamp('request_date')->useCurrent();
             $table->string('status')->default('pending');
             $table->text('admin_comment')->nullable();
             $table->string('attachment')->nullable();

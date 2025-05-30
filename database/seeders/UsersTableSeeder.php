@@ -7,6 +7,7 @@ use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Role;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 
 class UsersTableSeeder extends Seeder
 {
@@ -17,35 +18,40 @@ class UsersTableSeeder extends Seeder
      */
     public function run()
     {
-        // Make sure roles exist
-        $adminRole = Role::firstOrCreate(['name' => 'Admin']);
-        $teacherRole = Role::firstOrCreate(['name' => 'Teacher']);
-        $studentRole = Role::firstOrCreate(['name' => 'Student']);
-        
-        // Create Admin User
-        $admin = User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@example.com',
-            'password' => Hash::make('admin123'),
-        ]);
-        $admin->roles()->attach($adminRole);
-        
-        // Create Teacher User
-        $teacher = User::create([
+        // Get role IDs
+        $teacherRoleId = DB::table('roles')->where('name', 'Teacher')->value('id');
+        $studentRoleId = DB::table('roles')->where('name', 'Student')->value('id');
+
+        // Create a teacher
+        $teacherId = DB::table('users')->insertGetId([
             'name' => 'Teacher User',
             'email' => 'teacher@example.com',
-            'password' => Hash::make('teacher123'),
+            'password' => Hash::make('password'),
         ]);
-        $teacher->roles()->attach($teacherRole);
-        
-        // Create Student User
-        $student = User::create([
+
+        // Assign teacher role
+        if ($teacherRoleId) {
+            DB::table('role_user')->insert([
+                'user_id' => $teacherId,
+                'role_id' => $teacherRoleId,
+            ]);
+        }
+
+        // Create a student
+        $studentId = DB::table('users')->insertGetId([
             'name' => 'Student User',
             'email' => 'student@example.com',
-            'password' => Hash::make('student123'),
+            'password' => Hash::make('password'),
         ]);
-        $student->roles()->attach($studentRole);
-        
+
+        // Assign student role
+        if ($studentRoleId) {
+            DB::table('role_user')->insert([
+                'user_id' => $studentId,
+                'role_id' => $studentRoleId,
+            ]);
+        }
+
         $this->command->info('Users created successfully with different roles!');
     }
 }

@@ -36,7 +36,9 @@
     32 => 'App\\Providers\\AuthServiceProvider',
     33 => 'App\\Providers\\EventServiceProvider',
     34 => 'App\\Providers\\RouteServiceProvider',
-    35 => 'Barryvdh\\DomPDF\\ServiceProvider',
+    35 => 'App\\Providers\\HelperServiceProvider',
+    36 => 'Barryvdh\\DomPDF\\ServiceProvider',
+    37 => 'App\\Providers\\BladeServiceProvider',
   ),
   'eager' => 
   array (
@@ -61,7 +63,9 @@
     18 => 'App\\Providers\\AuthServiceProvider',
     19 => 'App\\Providers\\EventServiceProvider',
     20 => 'App\\Providers\\RouteServiceProvider',
-    21 => 'Barryvdh\\DomPDF\\ServiceProvider',
+    21 => 'App\\Providers\\HelperServiceProvider',
+    22 => 'Barryvdh\\DomPDF\\ServiceProvider',
+    23 => 'App\\Providers\\BladeServiceProvider',
   ),
   'deferred' => 
   array (

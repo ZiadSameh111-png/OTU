@@ -20,6 +20,9 @@ return new class extends Migration
             $table->decimal('midterm_grade', 5, 2)->nullable();
             $table->decimal('assignment_grade', 5, 2)->nullable();
             $table->decimal('final_grade', 5, 2)->nullable();
+            $table->decimal('score', 5, 2)->nullable(); // Total score (0-100)
+            $table->decimal('gpa', 3, 2)->nullable(); // GPA value (0.00-4.00)
+            $table->string('grade', 2)->nullable(); // Letter grade (A+, A, A-, etc.)
             $table->boolean('submitted')->default(false);
             $table->timestamp('submission_date')->nullable();
             $table->foreignId('updated_by')->nullable()->constrained('users');

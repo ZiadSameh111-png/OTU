@@ -19,7 +19,6 @@ class Exam extends Model
         'title',
         'course_id',
         'group_id',
-        'teacher_id',
         'duration',
         'status',
         'question_type',
@@ -55,11 +54,20 @@ class Exam extends Model
     }
 
     /**
-     * Get the teacher that created the exam.
+     * Get the teachers for the exam through the course.
      */
-    public function teacher()
+    public function teachers()
     {
-        return $this->belongsTo(User::class, 'teacher_id');
+        return $this->hasManyThrough(
+            User::class,
+            Course::class,
+            'id', // Foreign key on courses table
+            'id', // Foreign key on users table
+            'course_id', // Local key on exams table
+            'id' // Local key on courses table
+        )->whereHas('roles', function($query) {
+            $query->where('name', 'Teacher');
+        });
     }
 
     /**

@@ -1,0 +1,2264 @@
+{
+    "info": {
+        "name": "OTU API v2",
+        "description": "Complete API collection for the OTU Educational Management System. This collection includes endpoints for authentication, user management, course management, attendance tracking, exam management, fee management, and more. All endpoints require appropriate authentication tokens except for public routes.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Public",
+            "description": "Public endpoints that don't require authentication. These endpoints are accessible to all users without authorization tokens.",
+            "item": [
+                {
+                    "name": "Get Locations",
+                    "description": "Retrieve a list of all available campus locations and their details. This endpoint is public and can be accessed without authentication.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/locations",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "locations"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Authentication",
+            "description": "Authentication endpoints for user login, registration, and session management. These endpoints handle user authentication and token management.",
+            "item": [
+                {
+                    "name": "Login",
+                    "description": "Authenticate a user and receive an access token. Required fields: email, password, and device_name. Returns a bearer token for API access.",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"email\": \"admin@example.com\",\n    \"password\": \"password\",\n    \"device_name\": \"test_device\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/login",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Register",
+                    "description": "Create a new user account. Required fields: name, email, password, password_confirmation, and device_name. Returns a bearer token upon successful registration.",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password\",\n    \"password_confirmation\": \"password\",\n    \"device_name\": \"test_device\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/register",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "register"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "description": "Invalidate the current user's access token. Requires authentication token in the header.",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/logout",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "logout"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Current User",
+                    "description": "Retrieve the authenticated user's profile information. Requires authentication token in the header.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/user",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "user"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "description": "Administrative endpoints for managing users, groups, courses, schedules, and system settings. These endpoints are restricted to users with admin privileges.",
+            "item": [
+                {
+                    "name": "Users",
+                    "description": "User management endpoints for administrators. Includes functionality for creating, updating, and managing user accounts and roles.",
+                    "item": [
+                        {
+                            "name": "List Users",
+                            "description": "Retrieve a paginated list of all users in the system. Can be filtered by role, status, and search terms.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/users",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "users"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Create User",
+                            "description": "Create a new user account with specified role and permissions. Required fields: name, email, password, and role.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"New User\",\n    \"email\": \"newuser@example.com\",\n    \"password\": \"password\",\n    \"role\": \"Student\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/users",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "users"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get User",
+                            "description": "Retrieve detailed information about a specific user by their ID.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/users/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "users", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update User",
+                            "description": "Modify an existing user's information. Can update name, email, role, and other user details.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"Updated Name\",\n    \"email\": \"updated@example.com\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/users/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "users", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Delete User",
+                            "description": "Remove a user account from the system. This action cannot be undone.",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/users/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "users", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Roles",
+                            "description": "Retrieve a list of all available user roles and their associated permissions.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/roles",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "roles"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get User Groups",
+                            "description": "Retrieve a list of all user groups and their members.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/user-groups",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "user-groups"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "List Students",
+                            "description": "Retrieve a paginated list of all students. Can be filtered by group, course, or status.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/students",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "students"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "List Teachers",
+                            "description": "Retrieve a paginated list of all teachers. Can be filtered by department or subject area.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/teachers",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "teachers"]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Groups",
+                    "description": "Manage student groups and class sections. Includes functionality for creating, updating, and managing group assignments.",
+                    "item": [
+                        {
+                            "name": "List Groups",
+                            "description": "Retrieve a paginated list of all student groups. Can be filtered by academic year and semester.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/groups",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "groups"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Create Group",
+                            "description": "Create a new student group. Required fields: name, description. Optional: academic year, semester.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"name\": \"New Group\",\n    \"description\": \"Group Description\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/groups",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "groups"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Group Students",
+                            "description": "Retrieve a list of all students assigned to a specific group. Returns detailed student information.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/groups/:id/students",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "groups", ":id", "students"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Courses",
+                    "description": "Manage course offerings and assignments. Includes functionality for managing course teachers and group assignments.",
+                    "item": [
+                        {
+                            "name": "List Course Teachers",
+                            "description": "Retrieve a list of all teachers assigned to courses. Can be filtered by department or semester.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/course-teachers",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "course-teachers"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "List Course Groups",
+                            "description": "Retrieve a list of all groups assigned to courses. Shows course-group relationships and schedules.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/course-groups",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "course-groups"]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Schedules",
+                    "description": "Manage course schedules and timetables. Includes functionality for creating and managing class schedules, room assignments, and time slots.",
+                    "item": [
+                        {
+                            "name": "List Schedules",
+                            "description": "Retrieve a list of all course schedules. Can be filtered by day, time slot, or room.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/schedules",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "schedules"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Create Schedule",
+                            "description": "Create a new course schedule. Required fields: course_id, group_id, day, start_time, end_time.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"course_id\": 1,\n    \"group_id\": 1,\n    \"day\": \"Monday\",\n    \"start_time\": \"09:00\",\n    \"end_time\": \"10:30\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/schedules",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "schedules"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Schedule",
+                            "description": "Retrieve detailed information about a specific schedule by its ID.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/schedules/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "schedules", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update Schedule",
+                            "description": "Modify an existing schedule's details. Can update day, time slots, and room assignments.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"day\": \"Tuesday\",\n    \"start_time\": \"10:00\",\n    \"end_time\": \"11:30\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/schedules/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "schedules", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Delete Schedule",
+                            "description": "Remove a schedule from the system. This action cannot be undone.",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/schedules/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "schedules", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Group Schedules",
+                            "description": "Retrieve all schedules for a specific group. Shows complete timetable for the group.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/groups/:id/schedules",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "groups", ":id", "schedules"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Course Schedules",
+                            "description": "Retrieve all schedules for a specific course. Shows all time slots and groups for the course.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/courses/:id/schedules",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "courses", ":id", "schedules"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Attendance",
+                    "description": "Manage attendance records for both teachers and students. Includes functionality for tracking and reporting attendance.",
+                    "item": [
+                        {
+                            "name": "List Teacher Attendance",
+                            "description": "Retrieve attendance records for all teachers. Can be filtered by date range and status.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/teacher-attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "teacher-attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "List Student Attendance",
+                            "description": "Retrieve attendance records for all students. Can be filtered by course, group, or date range.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/student-attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "student-attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Course Attendance Stats",
+                            "description": "Retrieve statistical attendance data for a specific course. Shows attendance percentages and patterns.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/courses/:id/student-attendance/stats",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "courses", ":id", "student-attendance", "stats"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Student Notes",
+                    "description": "Manage academic and behavioral notes for students. Includes functionality for creating, updating, and tracking student records.",
+                    "item": [
+                        {
+                            "name": "Add Note",
+                            "description": "Create a new note for a student. Required fields: note content and type (academic/behavioral/other).",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"note\": \"Student note content\",\n    \"type\": \"academic\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/student/:student_id/notes",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "student", ":student_id", "notes"],
+                                    "variable": [
+                                        {
+                                            "key": "student_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update Note",
+                            "description": "Modify an existing student note. Can update note content and type.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"note\": \"Updated note content\",\n    \"type\": \"academic\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/student/notes/:note_id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "student", "notes", ":note_id"],
+                                    "variable": [
+                                        {
+                                            "key": "note_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Delete Note",
+                            "description": "Remove a student note from the system. This action cannot be undone.",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/student/notes/:note_id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "student", "notes", ":note_id"],
+                                    "variable": [
+                                        {
+                                            "key": "note_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Grade Reports",
+                    "description": "Generate and manage academic grade reports. Includes functionality for creating and exporting various types of grade reports.",
+                    "item": [
+                        {
+                            "name": "Export Course Report",
+                            "description": "Generate and download a detailed grade report for a specific course. Includes all student grades and statistics.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/grades/export-course-report/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "grades", "export-course-report", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Export Student Report",
+                            "description": "Generate and download a comprehensive grade report for a specific student. Includes all courses and cumulative statistics.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/grades/export-student-report/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "grades", "export-student-report", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Export Report",
+                            "description": "Generate and download a general academic report. Can be customized based on various parameters.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/grades/export-report",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "grades", "export-report"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Delete Student Report",
+                            "description": "Remove a generated student report from the system. This action cannot be undone.",
+                            "request": {
+                                "method": "DELETE",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin/grades/student-report/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin", "grades", "student-report", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Teacher",
+            "description": "Teacher-specific endpoints for managing courses, attendance, exams, and grades. These endpoints are restricted to users with teacher privileges.",
+            "item": [
+                {
+                    "name": "Attendance",
+                    "description": "Manage student attendance records for courses. Includes functionality for recording and tracking attendance.",
+                    "item": [
+                        {
+                            "name": "Record Attendance",
+                            "description": "Record attendance for students in a specific course. Required fields: course_id, date, and student attendance status.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"course_id\": 1,\n    \"date\": \"2024-04-20\",\n    \"students\": [\n        {\n            \"student_id\": 1,\n            \"status\": \"present\"\n        }\n    ]\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/student-attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "student-attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Student Stats",
+                            "description": "Retrieve attendance statistics for a specific student. Shows attendance patterns and percentages.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/students/:id/attendance/stats",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "students", ":id", "attendance", "stats"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Exams",
+                    "description": "Manage course examinations and assessments. Includes functionality for creating, grading, and managing exams.",
+                    "item": [
+                        {
+                            "name": "Create Exam",
+                            "description": "Create a new exam for a course. Required fields: title, course_id, total_marks, duration, start_time, end_time.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"title\": \"New Exam\",\n    \"course_id\": 1,\n    \"total_marks\": 100,\n    \"duration\": 120,\n    \"start_time\": \"2024-04-20 10:00:00\",\n    \"end_time\": \"2024-04-20 12:00:00\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Add Question",
+                            "description": "Add a question to an existing exam. Supports multiple question types including multiple choice and open-ended.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"question\": \"What is 2+2?\",\n    \"type\": \"multiple_choice\",\n    \"marks\": 10,\n    \"options\": [\"3\", \"4\", \"5\", \"6\"],\n    \"correct_answer\": \"4\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:id/questions",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":id", "questions"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Grade Open Ended",
+                            "description": "Grade open-ended questions for a student's exam submission. Includes feedback and marks allocation.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"grades\": [\n        {\n            \"question_id\": 1,\n            \"marks\": 8,\n            \"feedback\": \"Good answer\"\n        }\n    ]\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:examId/student/:studentId",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":examId", "student", ":studentId"],
+                                    "variable": [
+                                        {
+                                            "key": "examId",
+                                            "value": "1"
+                                        },
+                                        {
+                                            "key": "studentId",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Publish Exam",
+                            "description": "Make an exam visible to students. Exam must be complete with all questions before publishing.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:id/publish",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":id", "publish"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Unpublish Exam",
+                            "description": "Hide an exam from students. Useful for making last-minute adjustments to published exams.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:id/unpublish",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":id", "unpublish"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Open Exam",
+                            "description": "Make an exam available for students to take. Exam must be published before opening.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:id/open",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":id", "open"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Close Exam",
+                            "description": "Close an exam to prevent further submissions. Can be reopened if needed.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/exams/:id/close",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "exams", ":id", "close"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Student Attendance",
+                    "description": "Bulk management of student attendance records. Includes functionality for recording attendance for multiple students.",
+                    "item": [
+                        {
+                            "name": "Record Bulk Attendance",
+                            "description": "Record attendance for multiple students at once. Useful for quick attendance marking for entire classes.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"course_id\": 1,\n    \"date\": \"2024-04-20\",\n    \"attendances\": [\n        {\n            \"student_id\": 1,\n            \"status\": \"present\"\n        },\n        {\n            \"student_id\": 2,\n            \"status\": \"absent\"\n        }\n    ]\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/student-attendance/bulk",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "student-attendance", "bulk"]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Teacher Attendance",
+                    "description": "Manage teacher attendance records. Includes functionality for recording and tracking teacher presence.",
+                    "item": [
+                        {
+                            "name": "List Attendance",
+                            "description": "View personal attendance history. Can be filtered by date range.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Record Attendance",
+                            "description": "Record personal attendance for a day. Required fields: date, status, and location_id.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"date\": \"2024-04-20\",\n    \"status\": \"present\",\n    \"location_id\": 1\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Attendance",
+                            "description": "Retrieve details of a specific attendance record.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/attendance/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "attendance", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update Attendance",
+                            "description": "Modify an existing attendance record. Can update status and reason.",
+                            "request": {
+                                "method": "PUT",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"status\": \"absent\",\n    \"reason\": \"Sick leave\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/attendance/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "attendance", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Grades",
+                    "description": "Manage student grades and academic performance records. Includes functionality for recording and submitting grades.",
+                    "item": [
+                        {
+                            "name": "Batch Update Course Grades",
+                            "description": "Update grades for multiple students in a course simultaneously.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"grades\": [\n        {\n            \"student_id\": 1,\n            \"grade\": 85\n        },\n        {\n            \"student_id\": 2,\n            \"grade\": 90\n        }\n    ]\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/grades/course/:course_id/update",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "grades", "course", ":course_id", "update"],
+                                    "variable": [
+                                        {
+                                            "key": "course_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Submit Final Grades",
+                            "description": "Submit final grades for a course. This action typically locks the grades for the term.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/grades/course/:course_id/submit",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "grades", "course", ":course_id", "submit"],
+                                    "variable": [
+                                        {
+                                            "key": "course_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Export Course Grades",
+                            "description": "Generate and download a grade report for a specific course.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/teacher/grades/export/:course_id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "teacher", "grades", "export", ":course_id"],
+                                    "variable": [
+                                        {
+                                            "key": "course_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Student",
+            "description": "Student-specific endpoints for accessing courses, exams, grades, and other academic information. These endpoints are restricted to users with student privileges.",
+            "item": [
+                {
+                    "name": "Exams",
+                    "description": "Access and participate in course examinations. Includes functionality for taking exams and viewing results.",
+                    "item": [
+                        {
+                            "name": "List Available Exams",
+                            "description": "View all available exams for enrolled courses. Shows upcoming and ongoing exams.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/exams",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "exams"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Submit Exam",
+                            "description": "Submit answers for an exam. Required fields: answers array with question_id and answer.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"answers\": [\n        {\n            \"question_id\": 1,\n            \"answer\": \"4\"\n        }\n    ]\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/exams/:id/submit",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "exams", ":id", "submit"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "View Results",
+                            "description": "View results and feedback for a completed exam.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/exams/:id/results",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "exams", ":id", "results"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Fees",
+                    "description": "Manage student fees and payments. Includes functionality for viewing statements and processing payments.",
+                    "item": [
+                        {
+                            "name": "View Statement",
+                            "description": "View current fee statement showing all charges and payments.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/statement",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "statement"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Create Payment",
+                            "description": "Initiate a new fee payment. Required fields: amount and payment_method.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"amount\": 1000,\n    \"payment_method\": \"credit_card\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/:id/payment",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", ":id", "payment"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Payment History",
+                            "description": "View history of all fee payments and transactions.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/payments",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "payments"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Process Payment",
+                            "description": "Complete a pending payment transaction.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/payment/:transactionId/process",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "payment", ":transactionId", "process"],
+                                    "variable": [
+                                        {
+                                            "key": "transactionId",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Payment Receipt",
+                            "description": "Download receipt for a completed payment.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/payment/receipt/:paymentId",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "payment", "receipt", ":paymentId"],
+                                    "variable": [
+                                        {
+                                            "key": "paymentId",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Payment Gateway",
+                            "description": "Access payment gateway for processing online payments.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/payment-gateway/:transactionId",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "payment-gateway", ":transactionId"],
+                                    "variable": [
+                                        {
+                                            "key": "transactionId",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Retry Payment",
+                            "description": "Retry a failed payment transaction.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/fees/retry/:transactionId",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "fees", "retry", ":transactionId"],
+                                    "variable": [
+                                        {
+                                            "key": "transactionId",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Grades",
+                    "description": "Access academic grades and performance records.",
+                    "item": [
+                        {
+                            "name": "Get Course Grades",
+                            "description": "View grades for a specific course including assignments and exams.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/grades/course/:course_id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "grades", "course", ":course_id"],
+                                    "variable": [
+                                        {
+                                            "key": "course_id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Schedules",
+                    "description": "Access class schedules and timetables.",
+                    "item": [
+                        {
+                            "name": "List Schedules",
+                            "description": "View all class schedules for enrolled courses.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/schedules",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "schedules"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Schedule",
+                            "description": "View detailed information for a specific schedule.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/schedules/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "schedules", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Admin Requests",
+                    "description": "Manage administrative requests and applications.",
+                    "item": [
+                        {
+                            "name": "Create Request",
+                            "description": "Submit a new administrative request. Required fields: type and details.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"type\": \"certificate\",\n    \"details\": \"Request for graduation certificate\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin-requests",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin-requests"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "List Requests",
+                            "description": "View all submitted administrative requests and their status.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin-requests",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin-requests"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Update Request Status",
+                            "description": "Update the status of an administrative request.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"status\": \"approved\",\n    \"comment\": \"Request approved\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin-requests/:id/status",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin-requests", ":id", "status"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Add Response",
+                            "description": "Add a response to an existing administrative request.",
+                            "request": {
+                                "method": "POST",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    },
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n    \"response\": \"Your request has been processed\"\n}"
+                                },
+                                "url": {
+                                    "raw": "{{base_url}}/api/admin-requests/:id/responses",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "admin-requests", ":id", "responses"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "Attendance",
+                    "description": "Access personal attendance records.",
+                    "item": [
+                        {
+                            "name": "List Attendance",
+                            "description": "View personal attendance history for all courses.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/attendance",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "attendance"]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Attendance",
+                            "description": "View details of a specific attendance record.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/attendance/:id",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "attendance", ":id"],
+                                    "variable": [
+                                        {
+                                            "key": "id",
+                                            "value": "1"
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "name": "Get Attendance Stats",
+                            "description": "View attendance statistics and patterns.",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Authorization",
+                                        "value": "Bearer {{token}}"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/student/attendance/stats",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "student", "attendance", "stats"]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Reports",
+            "description": "Generate and access various academic and administrative reports.",
+            "item": [
+                {
+                    "name": "Student Report",
+                    "description": "Generate comprehensive report for a specific student including academic performance and attendance.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/reports/students/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "reports", "students", ":id"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Course Report",
+                    "description": "Generate detailed report for a specific course including student performance and statistics.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/reports/courses/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "reports", "courses", ":id"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Semester Report",
+                    "description": "Generate overall semester report including all courses and student performance.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/reports/semester",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "reports", "semester"]
+                        }
+                    }
+                },
+                {
+                    "name": "Group Report",
+                    "description": "Generate report for a specific group including academic and attendance statistics.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/reports/groups/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "reports", "groups", ":id"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Messages",
+            "description": "Manage internal messaging and communication.",
+            "item": [
+                {
+                    "name": "List Messages",
+                    "description": "View all messages in the inbox.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages"]
+                        }
+                    }
+                },
+                {
+                    "name": "Sent Messages",
+                    "description": "View all sent messages.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/sent",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", "sent"]
+                        }
+                    }
+                },
+                {
+                    "name": "Received Messages",
+                    "description": "View all received messages.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/received",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", "received"]
+                        }
+                    }
+                },
+                {
+                    "name": "Unread Count",
+                    "description": "Get count of unread messages.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/unread-count",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", "unread-count"]
+                        }
+                    }
+                },
+                {
+                    "name": "View Message",
+                    "description": "Read a specific message.",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", ":id"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Message",
+                    "description": "Remove a message from the system.",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/:id",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", ":id"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark as Read",
+                    "description": "Mark a message as read.",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/messages/:id/read",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "messages", ":id", "read"],
+                            "variable": [
+                                {
+                                    "key": "id",
+                                    "value": "1"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Notifications",
+            "item": [
+                {
+                    "name": "List Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "notifications"]
+                        }
+                    }
+                },
+                {
+                    "name": "Unread Count",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications/unread-count",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "notifications", "unread-count"]
+                        }
+                    }
+                },
+                {
+                    "name": "Mark All as Read",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications/mark-all-read",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "notifications", "mark-all-read"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete All",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/notifications",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "notifications"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Location",
+            "item": [
+                {
+                    "name": "Check Location",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n    \"latitude\": 0,\n    \"longitude\": 0\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/check-location",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "check-location"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Dashboard",
+            "item": [
+                {
+                    "name": "Get Dashboard Data",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/dashboard",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "dashboard"]
+                        }
+                    }
+                }
+            ]
+        }
+    ]
+} 

@@ -36,8 +36,8 @@ class StudentAttendanceController extends Controller
         $groupId = $request->input('group_id');
         $date = $request->input('date', Carbon::today()->format('Y-m-d'));
 
-        // Get courses taught by this teacher
-        $courses = Course::where('teacher_id', $teacher->id)->get();
+        // Get courses taught by this teacher using the many-to-many relationship
+        $courses = $teacher->courses;
         
         // Filter attendances by course if selected
         $query = StudentAttendance::where('teacher_id', $teacher->id)
@@ -56,15 +56,15 @@ class StudentAttendanceController extends Controller
         }
         
         if ($date) {
-            $query->whereDate('date', $date);
+            $query->whereDate('attendance_date', $date);
         }
         
         // Group attendance records by schedule and date
-        $attendances = $query->select('schedule_id', 'date', 
+        $attendances = $query->select('schedule_id', 'attendance_date', 
                 \DB::raw('COUNT(CASE WHEN status = "present" THEN 1 END) as present_count'), 
                 \DB::raw('COUNT(CASE WHEN status = "absent" THEN 1 END) as absent_count'))
-            ->groupBy('schedule_id', 'date')
-            ->orderBy('date', 'desc')
+            ->groupBy('schedule_id', 'attendance_date')
+            ->orderBy('attendance_date', 'desc')
             ->paginate(10);
         
         return view('teacher.attendance.index', compact('attendances', 'courses', 'courseId', 'groupId', 'date'));
@@ -192,5 +192,123 @@ class StudentAttendanceController extends Controller
         $group = $details->first()->schedule->group;
         
         return view('teacher.attendance.show', compact('details', 'course', 'group', 'attendance'));
+    }
+
+    /**
+     * Display attendance report for a specific course.
+     *
+     * @param  \App\Models\Course  $course
+     * @return \Illuminate\Http\Response
+     */
+    public function courseReport(Course $course)
+    {
+        // Verify that the authenticated teacher is associated with this course
+        $teacher = auth()->user();
+        if (!$teacher->courses->contains($course)) {
+            abort(403, 'Unauthorized action.');
+        }
+
+        // Get attendance records for this course
+        $attendanceRecords = StudentAttendance::where('course_id', $course->id)
+            ->with(['student', 'group'])
+            ->get();
+
+        // Group attendance by date and calculate statistics
+        $groupedAttendance = $attendanceRecords->groupBy('attendance_date')->map(function ($records) {
+            $total = $records->count();
+            $present = $records->where('status', 'present')->count();
+            $absent = $records->where('status', 'absent')->count();
+            $attendanceRate = $total > 0 ? ($present / $total) * 100 : 0;
+
+            return [
+                'total' => $total,
+                'present' => $present,
+                'absent' => $absent,
+                'attendance_rate' => $attendanceRate
+            ];
+        });
+
+        // Calculate overall statistics
+        $totalRecords = $attendanceRecords->count();
+        $totalPresent = $attendanceRecords->where('status', 'present')->count();
+        $totalAbsent = $attendanceRecords->where('status', 'absent')->count();
+        $overallAttendanceRate = $totalRecords > 0 ? ($totalPresent / $totalRecords) * 100 : 0;
+
+        return view('teacher.attendance.course-report', compact(
+            'course',
+            'groupedAttendance',
+            'totalRecords',
+            'totalPresent',
+            'totalAbsent',
+            'overallAttendanceRate'
+        ));
+    }
+
+    public function studentReport()
+    {
+        $teacher = auth()->user();
+        $students = User::where('role', 'student')
+            ->whereHas('groups', function ($query) use ($teacher) {
+                $query->whereHas('courses', function ($q) use ($teacher) {
+                    $q->whereIn('id', $teacher->courses->pluck('id'));
+                });
+            })
+            ->get();
+
+        $courses = $teacher->courses;
+
+        return view('teacher.attendance.student-report', compact('students', 'courses'));
+    }
+
+    public function dateReport()
+    {
+        $teacher = auth()->user();
+        $dateFrom = request('date_from');
+        $dateTo = request('date_to');
+
+        // Get attendance records for the specified date range
+        $query = StudentAttendance::whereHas('course', function($q) use ($teacher) {
+                $q->whereIn('id', $teacher->courses->pluck('id'));
+            })
+            ->with(['student', 'course', 'group']);
+
+        if ($dateFrom && $dateTo) {
+            $query->whereBetween('attendance_date', [$dateFrom, $dateTo]);
+        }
+
+        $attendances = $query->orderBy('attendance_date', 'desc')
+            ->get();
+
+        // Group attendance by date
+        $groupedAttendance = $attendances->groupBy('attendance_date')->map(function($records) {
+            $total = $records->count();
+            $present = $records->where('status', 'present')->count();
+            $absent = $records->where('status', 'absent')->count();
+            $attendanceRate = $total > 0 ? ($present / $total) * 100 : 0;
+
+            return [
+                'total' => $total,
+                'present' => $present,
+                'absent' => $absent,
+                'attendance_rate' => $attendanceRate,
+                'records' => $records
+            ];
+        });
+
+        // Calculate overall statistics
+        $totalRecords = $attendances->count();
+        $totalPresent = $attendances->where('status', 'present')->count();
+        $totalAbsent = $attendances->where('status', 'absent')->count();
+        $overallAttendanceRate = $totalRecords > 0 ? ($totalPresent / $totalRecords) * 100 : 0;
+
+        return view('teacher.attendance.date-report', compact(
+            'groupedAttendance',
+            'totalRecords',
+            'totalPresent',
+            'totalAbsent',
+            'overallAttendanceRate',
+            'dateFrom',
+            'dateTo'
+        ));
     }
 } 
