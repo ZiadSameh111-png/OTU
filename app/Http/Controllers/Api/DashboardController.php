@@ -70,9 +70,9 @@ class DashboardController extends Controller
             ->get();
 
         // Get financial statistics
-        $totalFees = Fee::sum('amount');
-        $paidFees = Fee::where('status', 'paid')->sum('amount');
-        $unpaidFees = Fee::where('status', 'unpaid')->sum('amount');
+        $totalFees = Fee::sum('total_amount');
+        $paidFees = Fee::where('status', 'paid')->sum('total_amount');
+        $unpaidFees = Fee::where('status', 'unpaid')->sum('total_amount');
 
         // Get attendance statistics
         $todayStudentAttendance = StudentAttendance::whereDate('attendance_date', Carbon::today())
@@ -219,8 +219,8 @@ class DashboardController extends Controller
 
         // Get fees information
         $fees = Fee::where('student_id', $student->id)->get();
-        $totalFees = $fees->sum('amount');
-        $paidFees = $fees->where('status', 'paid')->sum('amount');
+        $totalFees = $fees->sum('total_amount');
+        $paidFees = $fees->where('status', 'paid')->sum('total_amount');
 
         return response()->json([
             'status' => 'success',

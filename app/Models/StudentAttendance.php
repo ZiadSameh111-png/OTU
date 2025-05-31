@@ -42,6 +42,14 @@ class StudentAttendance extends Model
     }
 
     /**
+     * Get the course associated with the attendance through the schedule.
+     */
+    public function course()
+    {
+        return $this->hasOneThrough(Course::class, Schedule::class, 'id', 'id', 'schedule_id', 'course_id');
+    }
+
+    /**
      * Get the student associated with the attendance.
      */
     public function student()

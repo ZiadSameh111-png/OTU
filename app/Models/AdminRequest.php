@@ -34,6 +34,14 @@ class AdminRequest extends Model
     }
 
     /**
+     * الحصول على المستخدم صاحب الطلب (نفس student ولكن باسم مختلف للتوافق مع API)
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
      * الحصول على المسؤول الذي عالج الطلب
      */
     public function admin()
