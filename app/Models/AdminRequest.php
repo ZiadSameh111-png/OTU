@@ -95,4 +95,12 @@ class AdminRequest extends Model
 
         return $priorities[$this->priority] ?? $this->priority;
     }
+
+    /**
+     * Get the responses for this admin request.
+     */
+    public function responses()
+    {
+        return $this->hasMany(AdminRequestResponse::class, 'admin_request_id');
+    }
 }
