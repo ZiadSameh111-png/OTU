@@ -17,9 +17,13 @@ class Exam extends Model
      */
     protected $fillable = [
         'title',
+        'description',
         'course_id',
+        'teacher_id',
         'group_id',
         'duration',
+        'start_time',
+        'end_time',
         'status',
         'question_type',
         'total_marks',
@@ -68,6 +72,23 @@ class Exam extends Model
         )->whereHas('roles', function($query) {
             $query->where('name', 'Teacher');
         });
+    }
+
+    /**
+     * Get the primary teacher for the exam (for backward compatibility).
+     * This creates a relationship through the course to the first teacher.
+     */
+    public function teacher()
+    {
+        return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    /**
+     * Get the primary teacher as an attribute (for backward compatibility).
+     */
+    public function getTeacherAttribute()
+    {
+        return $this->course ? $this->course->teachers()->first() : null;
     }
 
     /**

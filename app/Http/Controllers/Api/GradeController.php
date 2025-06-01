@@ -45,7 +45,7 @@ class GradeController extends Controller
      */
     private function adminIndex()
     {
-        $courses = Course::with('teacher')->get();
+        $courses = Course::with(['teachers', 'groups.students'])->get();
         $groups = Group::where('active', true)->get();
         
         // Get submission statistics

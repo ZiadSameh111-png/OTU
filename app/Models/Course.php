@@ -34,6 +34,18 @@ class Course extends Model
     }
 
     /**
+     * Get the primary teacher for the course (first teacher for backward compatibility).
+     */
+    public function teacher()
+    {
+        return $this->belongsToMany(User::class, 'course_teacher', 'course_id', 'teacher_id')
+                    ->whereHas('roles', function($query) {
+                        $query->where('name', 'Teacher');
+                    })
+                    ->limit(1);
+    }
+
+    /**
      * Get the groups for the course.
      */
     public function groups()
@@ -63,5 +75,13 @@ class Course extends Model
     public function schedules()
     {
         return $this->hasMany(Schedule::class);
+    }
+
+    /**
+     * Get the primary teacher as an attribute (for backward compatibility).
+     */
+    public function getTeacherAttribute()
+    {
+        return $this->teachers()->first();
     }
 }

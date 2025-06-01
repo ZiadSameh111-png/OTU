@@ -313,7 +313,7 @@ class GradeController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $courses = Course::with('teacher')->get();
+        $courses = Course::with('teachers')->get();
         $groups = Group::where('active', true)->get();
         
         // Get submission statistics
@@ -354,7 +354,7 @@ class GradeController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $course = Course::with(['groups.students', 'teacher'])->findOrFail($courseId);
+        $course = Course::with(['groups.students', 'teachers'])->findOrFail($courseId);
         $grades = Grade::where('course_id', $courseId)->get();
         
         return view('admin.grades.view', compact('course', 'grades'));
@@ -372,7 +372,7 @@ class GradeController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $courses = Course::with(['teacher', 'groups', 'grades'])->get();
+        $courses = Course::with(['teachers', 'groups', 'grades'])->get();
         $groups = Group::where('active', true)->get();
         
         // Calculate statistics for each course
@@ -572,7 +572,7 @@ class GradeController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $group = Group::with(['students', 'courses.teacher'])->findOrFail($groupId);
+        $group = Group::with(['students', 'courses.teachers'])->findOrFail($groupId);
         
         // Calculate statistics for each course for this group
         $courseStats = [];
@@ -920,12 +920,13 @@ class GradeController extends Controller
      */
     public function edit($id)
     {
-        $user = Auth::user();
-        if (!$user->hasRole('Admin')) {
+        $teacher = Auth::user();
+        if (!$teacher->hasRole('Teacher')) {
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
         
         $grade = Grade::with(['student', 'course'])->findOrFail($id);
+        $course = Course::with(['groups.students', 'teachers'])->findOrFail($grade->course_id);
         
         // Add edit log history
         $editLogs = DB::table('grade_edit_logs')
@@ -991,5 +992,39 @@ class GradeController extends Controller
         ]);
         
         return redirect()->route('admin.grades.reports')->with('success', 'تم تعديل الدرجات بنجاح');
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function create()
+    {
+        $teacher = Auth::user();
+        if (!$teacher->hasRole('Teacher')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $courses = Course::with('teachers')->get();
+        
+        // ... existing code ...
+    }
+
+    /**
+     * Show the grading management page.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function admin()
+    {
+        $user = auth()->user();
+        if (!$user->hasRole('Admin')) {
+            return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
+        }
+
+        $courses = Course::with(['teachers', 'groups', 'grades'])->get();
+        
+        // ... existing code ...
     }
 }

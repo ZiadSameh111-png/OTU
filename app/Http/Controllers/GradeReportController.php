@@ -215,7 +215,7 @@ class GradeReportController extends Controller
             return redirect()->route('dashboard')->with('error', 'غير مصرح لك بالوصول إلى هذه الصفحة');
         }
 
-        $courses = Course::with('teacher')->get();
+        $courses = Course::with('teachers')->get();
         $groups = Group::all();
         
         $selectedCourseId = $request->input('course_id');

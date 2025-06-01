@@ -504,7 +504,275 @@ curl -X GET "https://your-domain.com/api/admin/users?role=Student&per_page=20" \
 
 ---
 
-## 11. Dashboard Management
+## 11. Administrative Request Management
+
+### Get All Administrative Requests
+**GET** `/api/admin/admin-requests`
+
+**Description:** 
+Retrieves all administrative requests submitted by students, such as leave requests, certificate requests, group transfers, etc.
+
+**Query Parameters:**
+- `type` (optional): Filter by request type (leave, certificate_request, group_transfer, course_withdrawal, absence_excuse, transcript, other)
+- `status` (optional): Filter by status (pending, approved, rejected)
+- `priority` (optional): Filter by priority (low, normal, high, urgent)
+- `student_id` (optional): Filter by specific student ID
+- `date_from` (optional): Filter requests from date (YYYY-MM-DD)
+- `date_to` (optional): Filter requests to date (YYYY-MM-DD)
+- `per_page` (optional): Items per page (default: 15)
+
+**Example Request:**
+```bash
+curl -X GET "https://your-domain.com/api/admin/admin-requests?status=pending&priority=high" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 5,
+                "user_id": 11,
+                "admin_id": 1,
+                "type": "course_withdrawal",
+                "details": "الانسحاب من المقرر لإعادة تسجيله في فصل آخر",
+                "priority": "high",
+                "request_date": "2025-05-29T21:00:00.000000Z",
+                "status": "approved",
+                "admin_comment": "تم الموافقة على الطلب",
+                "attachment": null,
+                "created_at": "2025-05-30T00:43:31.000000Z",
+                "updated_at": "2025-06-04T00:43:31.000000Z",
+                "user": {
+                    "id": 11,
+                    "name": "فاطمة سالم العتيبي",
+                    "email": "student2@otu.edu",
+                    "email_verified_at": null,
+                    "created_at": "2025-05-31T00:43:19.000000Z",
+                    "updated_at": "2025-05-31T00:43:19.000000Z",
+                    "group_id": 1
+                }
+            }
+        ],
+        "total": 23,
+        "per_page": 15
+    }
+}
+```
+
+### Create Administrative Request
+**POST** `/api/admin/admin-requests`
+
+**Description:** 
+Creates a new administrative request. This is typically used by students, but admins can create requests on behalf of students.
+
+**Request Body:**
+```json
+{
+    "user_id": 45,
+    "type": "certificate_request",
+    "details": "طلب شهادة دراسية للتقديم على وظيفة جديدة",
+    "priority": "normal",
+    "request_date": "2024-06-01",
+    "attachment": "employment_letter.pdf"
+}
+```
+
+**Request Types:**
+- `leave`: طلب إجازة
+- `certificate_request`: طلب شهادة دراسية
+- `group_transfer`: طلب نقل مجموعة
+- `course_withdrawal`: طلب انسحاب من مقرر
+- `absence_excuse`: طلب عذر غياب
+- `transcript`: طلب كشف درجات
+- `other`: طلب آخر
+
+**Priority Levels:**
+- `low`: منخفضة
+- `normal`: عادية
+- `high`: عالية
+- `urgent`: عاجلة
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم إنشاء الطلب الإداري بنجاح",
+    "data": {
+        "id": 24,
+        "type": "certificate_request",
+        "type_name": "طلب شهادة دراسية",
+        "details": "طلب شهادة دراسية للتقديم على وظيفة جديدة",
+        "priority": "normal",
+        "priority_name": "عادية",
+        "status": "pending",
+        "status_name": "قيد المعالجة",
+        "user": {
+            "id": 45,
+            "name": "فاطمة علي"
+        },
+        "created_at": "2024-06-01T08:30:00.000000Z"
+    }
+}
+```
+
+### Get Administrative Request Details
+**GET** `/api/admin/admin-requests/{adminRequest}`
+
+**Description:** 
+Retrieves detailed information about a specific administrative request including any responses or comments.
+
+**Example Request:**
+```bash
+curl -X GET "https://your-domain.com/api/admin/admin-requests/15" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "data": {
+        "id": 15,
+        "type": "leave",
+        "type_name": "طلب إجازة",
+        "details": "طلب إجازة مرضية لمدة أسبوع بسبب حالة صحية طارئة",
+        "priority": "high",
+        "priority_name": "عالية",
+        "request_date": "2024-05-30",
+        "status": "approved",
+        "status_name": "مقبول",
+        "admin_comment": "تمت الموافقة على الإجازة المرضية. نتمنى لك الشفاء العاجل.",
+        "attachment": "medical_report.pdf",
+        "user": {
+            "id": 45,
+            "name": "فاطمة علي",
+            "email": "fatima@example.com",
+            "group": {
+                "id": 2,
+                "name": "المجموعة الثانية"
+            }
+        },
+        "admin": {
+            "id": 1,
+            "name": "إدارة النظام",
+            "email": "admin@otu.edu"
+        },
+        "responses": [
+            {
+                "id": 3,
+                "message": "تم مراجعة التقرير الطبي وهو مقبول",
+                "created_by": {
+                    "id": 1,
+                    "name": "إدارة النظام"
+                },
+                "created_at": "2024-05-31T09:00:00.000000Z"
+            }
+        ],
+        "created_at": "2024-05-30T10:15:00.000000Z",
+        "updated_at": "2024-05-31T09:15:00.000000Z"
+    }
+}
+```
+
+### Update Request Status
+**POST** `/api/admin/admin-requests/{adminRequest}/status`
+
+**Description:** 
+Updates the status of an administrative request (approve, reject, or keep pending).
+
+**Request Body:**
+```json
+{
+    "status": "approved",
+    "admin_comment": "تمت الموافقة على الطلب. سيتم إصدار الشهادة خلال 3 أيام عمل."
+}
+```
+
+**Status Options:**
+- `pending`: قيد المعالجة
+- `approved`: مقبول
+- `rejected`: مرفوض
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم تحديث حالة الطلب بنجاح",
+    "data": {
+        "id": 15,
+        "status": "approved",
+        "status_name": "مقبول",
+        "admin_comment": "تمت الموافقة على الطلب. سيتم إصدار الشهادة خلال 3 أيام عمل.",
+        "admin": {
+            "id": 1,
+            "name": "إدارة النظام"
+        },
+        "updated_at": "2024-06-01T11:30:00.000000Z"
+    }
+}
+```
+
+### Add Response to Request
+**POST** `/api/admin/admin-requests/{adminRequest}/responses`
+
+**Description:** 
+Adds a response or comment to an administrative request for communication with the student.
+
+**Request Body:**
+```json
+{
+    "message": "نحتاج إلى مزيد من المعلومات. يرجى تقديم تقرير طبي مفصل."
+}
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم إضافة الرد بنجاح",
+    "data": {
+        "id": 8,
+        "message": "نحتاج إلى مزيد من المعلومات. يرجى تقديم تقرير طبي مفصل.",
+        "admin_request_id": 15,
+        "created_by": {
+            "id": 1,
+            "name": "إدارة النظام",
+            "email": "admin@otu.edu"
+        },
+        "created_at": "2024-06-01T14:20:00.000000Z"
+    }
+}
+```
+
+**Error Responses:**
+
+**Request Not Found (404):**
+```json
+{
+    "status": "error",
+    "message": "الطلب الإداري غير موجود"
+}
+```
+
+**Invalid Status (422):**
+```json
+{
+    "status": "error",
+    "message": "Validation error",
+    "errors": {
+        "status": ["The selected status is invalid."]
+    }
+}
+```
+
+---
+
+## 12. Dashboard Management
 
 ### Get Admin Dashboard
 **GET** `/api/admin/dashboard`

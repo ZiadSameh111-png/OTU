@@ -29,8 +29,8 @@ class TeacherAttendanceController extends Controller
                 'message' => 'Unauthorized access'
             ], 403);
         }
-
-        $query = TeacherAttendance::with(['teacher', 'course']);
+        
+        $query = TeacherAttendance::with(['teacher']);
 
         // If teacher, only show their own attendance
         if ($user->hasRole('Teacher')) {
@@ -41,17 +41,20 @@ class TeacherAttendanceController extends Controller
             $query->where('teacher_id', $request->teacher_id);
         }
 
-        // Filter by course if provided
-        if ($request->has('course_id')) {
-            $query->where('course_id', $request->course_id);
-        }
-
         // Filter by date range
         if ($request->has('start_date')) {
             $query->whereDate('attendance_date', '>=', $request->start_date);
         }
         if ($request->has('end_date')) {
             $query->whereDate('attendance_date', '<=', $request->end_date);
+        }
+        if ($request->has('date')) {
+            $query->whereDate('attendance_date', $request->date);
+        }
+
+        // Filter by status if provided
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
         }
 
         $attendances = $query->orderBy('attendance_date', 'desc')->paginate(20);
@@ -72,7 +75,7 @@ class TeacherAttendanceController extends Controller
     {
         $user = Auth::user();
 
-        if (!$user->hasRole('Teacher')) {
+        if (!$user->hasRole('Admin')) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthorized access'
@@ -80,10 +83,11 @@ class TeacherAttendanceController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'course_id' => 'required|exists:courses,id',
+            'teacher_id' => 'required|exists:users,id',
             'attendance_date' => 'required|date|before_or_equal:today',
-            'check_in_time' => 'required|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i|after:check_in_time',
+            'check_in' => 'nullable|date_format:Y-m-d H:i:s',
+            'check_out' => 'nullable|date_format:Y-m-d H:i:s|after:check_in',
+            'status' => 'required|in:present,absent,late,excused,on_leave',
             'notes' => 'nullable|string',
         ]);
 
@@ -95,35 +99,35 @@ class TeacherAttendanceController extends Controller
             ], 422);
         }
 
-        // Check if teacher is assigned to this course
-        $course = Course::find($request->course_id);
-        if (!$course->teachers->contains($user->id)) {
+        // Check if teacher exists and has teacher role
+        $teacher = User::find($request->teacher_id);
+        if (!$teacher->hasRole('Teacher')) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'You are not assigned to this course'
-            ], 403);
+                'message' => 'User is not a teacher'
+            ], 422);
         }
 
         // Check for duplicate attendance record
-        $existingAttendance = TeacherAttendance::where('teacher_id', $user->id)
-            ->where('course_id', $request->course_id)
+        $existingAttendance = TeacherAttendance::where('teacher_id', $request->teacher_id)
             ->whereDate('attendance_date', $request->attendance_date)
             ->first();
 
         if ($existingAttendance) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Attendance record already exists for this date'
+                'message' => 'Attendance record already exists for this teacher on this date'
             ], 422);
         }
 
         $attendance = TeacherAttendance::create([
-            'teacher_id' => $user->id,
-            'course_id' => $request->course_id,
+            'teacher_id' => $request->teacher_id,
             'attendance_date' => $request->attendance_date,
-            'check_in_time' => $request->check_in_time,
-            'check_out_time' => $request->check_out_time,
+            'check_in' => $request->check_in,
+            'check_out' => $request->check_out,
+            'status' => $request->status,
             'notes' => $request->notes,
+            'recorded_by' => $user->id,
         ]);
 
         return response()->json([
@@ -151,7 +155,7 @@ class TeacherAttendanceController extends Controller
             ], 403);
         }
 
-        $attendance->load(['teacher', 'course']);
+        $attendance->load(['teacher']);
 
         return response()->json([
             'status' => 'success',
@@ -179,8 +183,9 @@ class TeacherAttendanceController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'check_in_time' => 'required|date_format:H:i',
-            'check_out_time' => 'required|date_format:H:i|after:check_in_time',
+            'check_in' => 'nullable|date_format:Y-m-d H:i:s',
+            'check_out' => 'nullable|date_format:Y-m-d H:i:s|after:check_in',
+            'status' => 'required|in:present,absent,late,excused,on_leave',
             'notes' => 'nullable|string',
         ]);
 
@@ -193,8 +198,9 @@ class TeacherAttendanceController extends Controller
         }
 
         $attendance->update([
-            'check_in_time' => $request->check_in_time,
-            'check_out_time' => $request->check_out_time,
+            'check_in' => $request->check_in,
+            'check_out' => $request->check_out,
+            'status' => $request->status,
             'notes' => $request->notes,
         ]);
 
@@ -256,17 +262,28 @@ class TeacherAttendanceController extends Controller
             ->get();
 
         $totalHours = 0;
+        $presentDays = 0;
+        
         foreach ($attendances as $attendance) {
-            $checkIn = Carbon::parse($attendance->check_in_time);
-            $checkOut = Carbon::parse($attendance->check_out_time);
-            $totalHours += $checkOut->diffInHours($checkIn);
+            if ($attendance->check_in && $attendance->check_out) {
+                $checkIn = Carbon::parse($attendance->check_in);
+                $checkOut = Carbon::parse($attendance->check_out);
+                $totalHours += $checkOut->diffInHours($checkIn);
+            }
+            
+            if (in_array($attendance->status, ['present', 'late'])) {
+                $presentDays++;
+            }
         }
 
         $stats = [
-            'total_days' => $attendances->count(),
+            'total_days_recorded' => $attendances->count(),
+            'present_days' => $presentDays,
+            'absent_days' => $attendances->where('status', 'absent')->count(),
+            'late_days' => $attendances->where('status', 'late')->count(),
             'total_hours' => $totalHours,
-            'average_hours_per_day' => $attendances->count() > 0 ? round($totalHours / $attendances->count(), 2) : 0,
-            'attendance_percentage' => round(($attendances->count() / 30) * 100, 2),
+            'average_hours_per_day' => $presentDays > 0 ? round($totalHours / $presentDays, 2) : 0,
+            'attendance_percentage' => $attendances->count() > 0 ? round(($presentDays / $attendances->count()) * 100, 2) : 0,
         ];
 
         return response()->json([
@@ -274,55 +291,7 @@ class TeacherAttendanceController extends Controller
             'data' => [
                 'teacher' => $teacher,
                 'statistics' => $stats,
-                'attendances' => $attendances
-            ]
-        ]);
-    }
-
-    /**
-     * Get attendance statistics for a course.
-     *
-     * @param  \App\Models\Course  $course
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function courseStats(Course $course)
-    {
-        $user = Auth::user();
-
-        if (!$user->hasRole('Admin')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthorized access'
-            ], 403);
-        }
-
-        $attendances = TeacherAttendance::where('course_id', $course->id)
-            ->with('teacher')
-            ->get()
-            ->groupBy('teacher_id');
-
-        $teacherStats = [];
-        foreach ($attendances as $teacherId => $teacherAttendances) {
-            $totalHours = 0;
-            foreach ($teacherAttendances as $attendance) {
-                $checkIn = Carbon::parse($attendance->check_in_time);
-                $checkOut = Carbon::parse($attendance->check_out_time);
-                $totalHours += $checkOut->diffInHours($checkIn);
-            }
-
-            $teacherStats[] = [
-                'teacher' => $teacherAttendances->first()->teacher,
-                'total_days' => $teacherAttendances->count(),
-                'total_hours' => $totalHours,
-                'average_hours_per_day' => round($totalHours / $teacherAttendances->count(), 2),
-            ];
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'course' => $course,
-                'teacher_statistics' => $teacherStats
+                'recent_attendances' => $attendances->take(10)
             ]
         ]);
     }
