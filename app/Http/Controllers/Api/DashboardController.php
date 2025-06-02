@@ -218,7 +218,7 @@ class DashboardController extends Controller
             ->get();
 
         // Get fees information
-        $fees = Fee::where('student_id', $student->id)->get();
+        $fees = Fee::where('user_id', $student->id)->get();
         $totalFees = $fees->sum('total_amount');
         $paidFees = $fees->where('status', 'paid')->sum('total_amount');
 
