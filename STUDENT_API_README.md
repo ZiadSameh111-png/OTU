@@ -631,7 +631,310 @@ Retrieves all schedules for a specific group (useful for group representatives).
 
 ---
 
-## 6. Student Attendance Management
+## 6. Notification Management
+
+### Get All Notifications
+**GET** `/api/notifications`
+
+**Description:** 
+Retrieves all notifications for the authenticated student including system announcements, grade updates, fee reminders, and course notifications.
+
+**Query Parameters:**
+- `page` (optional): Page number for pagination (default: 1)
+- `per_page` (optional): Items per page (default: 15)
+- `type` (optional): Filter by notification type (system, grade, fee, course, exam)
+- `read` (optional): true/false - filter by read status
+- `date_from` (optional): Filter notifications from date (YYYY-MM-DD)
+- `date_to` (optional): Filter notifications to date (YYYY-MM-DD)
+
+**Example Request:**
+```bash
+curl -X GET "https://your-domain.com/api/notifications?read=false&per_page=10" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "data": {
+        "current_page": 1,
+        "data": [
+            {
+                "id": 45,
+                "title": "تم نشر درجات امتحان منتصف الفصل",
+                "message": "تم نشر درجات امتحان منتصف الفصل لمقرر مقدمة في البرمجة. يمكنك مراجعة درجتك من خلال النظام.",
+                "type": "grade",
+                "priority": "medium",
+                "is_read": false,
+                "data": {
+                    "course_id": 1,
+                    "course_name": "مقدمة في البرمجة",
+                    "exam_id": 8,
+                    "grade": 85
+                },
+                "created_at": "2024-11-24T14:30:00.000000Z",
+                "read_at": null
+            },
+            {
+                "id": 44,
+                "title": "تذكير دفع الرسوم الدراسية",
+                "message": "يُرجى دفع الرسوم الدراسية المستحقة قبل تاريخ 2024-12-31 لتجنب الرسوم الإضافية.",
+                "type": "fee",
+                "priority": "high",
+                "is_read": true,
+                "data": {
+                    "fee_id": 15,
+                    "amount": 4000.00,
+                    "due_date": "2024-12-31"
+                },
+                "created_at": "2024-11-20T09:00:00.000000Z",
+                "read_at": "2024-11-21T10:15:00.000000Z"
+            }
+        ],
+        "total": 25,
+        "per_page": 10,
+        "last_page": 3,
+        "from": 1,
+        "to": 10
+    }
+}
+```
+
+### Get Unread Notifications Count
+**GET** `/api/notifications/unread-count`
+
+**Description:** 
+Retrieves the count of unread notifications for the authenticated student. Useful for displaying notification badges in UI.
+
+**Example Request:**
+```bash
+curl -X GET "https://your-domain.com/api/notifications/unread-count" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "data": {
+        "unread_count": 8,
+        "by_type": {
+            "system": 2,
+            "grade": 3,
+            "fee": 2,
+            "course": 1,
+            "exam": 0
+        },
+        "priority_breakdown": {
+            "high": 2,
+            "medium": 4,
+            "low": 2
+        }
+    }
+}
+```
+
+### Get Notification Details
+**GET** `/api/notifications/{notification}`
+
+**Description:** 
+Retrieves detailed information about a specific notification and automatically marks it as read.
+
+**Example Request:**
+```bash
+curl -X GET "https://your-domain.com/api/notifications/45" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "data": {
+        "id": 45,
+        "title": "تم نشر درجات امتحان منتصف الفصل",
+        "message": "تم نشر درجات امتحان منتصف الفصل لمقرر مقدمة في البرمجة. يمكنك مراجعة درجتك من النظام والاطلاع على التفاصيل والملاحظات من الأستاذ المشرف.",
+        "type": "grade",
+        "priority": "medium",
+        "is_read": true,
+        "sender": {
+            "type": "system",
+            "name": "نظام إدارة التعليم"
+        },
+        "data": {
+            "course_id": 1,
+            "course_name": "مقدمة في البرمجة",
+            "course_code": "CS101",
+            "exam_id": 8,
+            "exam_title": "امتحان منتصف الفصل",
+            "grade": 85,
+            "total_marks": 100,
+            "percentage": 85.0,
+            "letter_grade": "B+",
+            "teacher_comments": "أداء ممتاز، استمر على هذا المستوى"
+        },
+        "actions": [
+            {
+                "label": "عرض الدرجة",
+                "type": "redirect",
+                "url": "/api/student/grades/45"
+            },
+            {
+                "label": "عرض تفاصيل الامتحان",
+                "type": "redirect", 
+                "url": "/api/student/exams/8/results"
+            }
+        ],
+        "created_at": "2024-11-24T14:30:00.000000Z",
+        "read_at": "2024-11-24T15:45:00.000000Z"
+    }
+}
+```
+
+### Mark Notification as Read
+**POST** `/api/notifications/{notification}/read`
+
+**Description:** 
+Manually marks a specific notification as read without retrieving its full details.
+
+**Example Request:**
+```bash
+curl -X POST "https://your-domain.com/api/notifications/45/read" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم تحديد الإشعار كمقروء",
+    "data": {
+        "notification_id": 45,
+        "is_read": true,
+        "read_at": "2024-11-24T15:45:00.000000Z"
+    }
+}
+```
+
+### Mark All Notifications as Read
+**POST** `/api/notifications/mark-all-read`
+
+**Description:** 
+Marks all unread notifications for the authenticated student as read.
+
+**Request Body (Optional):**
+```json
+{
+    "type": "grade",
+    "before_date": "2024-11-01"
+}
+```
+
+**Example Request:**
+```bash
+curl -X POST "https://your-domain.com/api/notifications/mark-all-read" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"type": "grade"}'
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم تحديد جميع الإشعارات كمقروءة",
+    "data": {
+        "marked_count": 8,
+        "total_notifications": 25,
+        "remaining_unread": 0
+    }
+}
+```
+
+### Delete Notification
+**DELETE** `/api/notifications/{notification}`
+
+**Description:** 
+Deletes a specific notification for the authenticated student.
+
+**Example Request:**
+```bash
+curl -X DELETE "https://your-domain.com/api/notifications/45" \
+  -H "Authorization: Bearer {token}"
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم حذف الإشعار بنجاح",
+    "data": {
+        "deleted_notification_id": 45
+    }
+}
+```
+
+### Delete All Notifications
+**DELETE** `/api/notifications`
+
+**Description:** 
+Deletes all notifications for the authenticated student with optional filtering.
+
+**Request Body (Optional):**
+```json
+{
+    "type": "grade",
+    "read_only": true,
+    "before_date": "2024-10-01"
+}
+```
+
+**Example Request:**
+```bash
+curl -X DELETE "https://your-domain.com/api/notifications" \
+  -H "Authorization: Bearer {token}" \
+  -H "Content-Type: application/json" \
+  -d '{"read_only": true}'
+```
+
+**Example Response:**
+```json
+{
+    "status": "success",
+    "message": "تم حذف الإشعارات بنجاح",
+    "data": {
+        "deleted_count": 15,
+        "remaining_count": 10
+    }
+}
+```
+
+### Notification Types
+
+The system supports the following notification types:
+
+| Type | Description | Priority Levels |
+|------|-------------|-----------------|
+| `system` | إشعارات النظام العامة والإعلانات | high, medium, low |
+| `grade` | إشعارات الدرجات والنتائج | medium, low |
+| `fee` | إشعارات الرسوم والمدفوعات | high, medium |
+| `course` | إشعارات المقررات والمحاضرات | medium, low |
+| `exam` | إشعارات الامتحانات والاختبارات | high, medium |
+| `attendance` | إشعارات الحضور والغياب | medium, low |
+| `schedule` | إشعارات الجدول الدراسي | low |
+
+### Notification Priority Levels
+
+| Priority | Description | Use Cases |
+|----------|-------------|-----------|
+| `high` | إشعارات عاجلة ومهمة | رسوم مستحقة، امتحانات قريبة، إعلانات مهمة |
+| `medium` | إشعارات مهمة غير عاجلة | درجات جديدة، تحديثات المقررات |
+| `low` | إشعارات معلوماتية | تذكيرات عامة، نصائح دراسية |
+
+---
+
+## 7. Student Attendance Management
 
 ### Get Student Attendance
 **GET** `/api/student/attendance`

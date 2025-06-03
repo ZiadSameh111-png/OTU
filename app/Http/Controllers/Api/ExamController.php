@@ -322,21 +322,49 @@ class ExamController extends Controller
         $answers = collect($request->answers);
         $questions = collect($exam->questions);
 
-        foreach ($answers as $answer) {
-            $question = $questions[$answer['question_index']] ?? null;
-            if ($question) {
-                $isCorrect = strtolower($answer['answer']) === strtolower($question['correct_answer']);
-                $score = $isCorrect ? $question['marks'] : 0;
-                $totalScore += $score;
+        // Fetch the actual ExamQuestion model records from the exam_questions table
+        $actualExamQuestionModels = \App\Models\ExamQuestion::where('exam_id', $exam->id)->orderBy('order')->get();
+
+        foreach ($answers as $answerData) {
+            $questionIndex = $answerData['question_index'];
+            $studentProvidedAnswer = $answerData['answer'];
+
+            // Get the question definition (correct_answer, marks) from the Exam's JSON field
+            $questionDefinitionFromJson = $questions->get($questionIndex);
+
+            // Get the corresponding ExamQuestion model from the database table
+            // This relies on the 'order' in exam_questions table matching the 0-based index from the request
+            $examQuestionRecord = $actualExamQuestionModels->get($questionIndex);
+
+            if ($questionDefinitionFromJson && $examQuestionRecord) {
+                $isCorrect = strtolower($studentProvidedAnswer) === strtolower($questionDefinitionFromJson['correct_answer']);
+                $marksObtainedForThisAnswer = $isCorrect ? $questionDefinitionFromJson['marks'] : 0;
+                $totalScore += $marksObtainedForThisAnswer;
 
                 StudentExamAnswer::create([
                     'exam_id' => $exam->id,
                     'student_id' => $user->id,
-                    'question_index' => $answer['question_index'],
-                    'student_answer' => $answer['answer'],
+                    'question_id' => $examQuestionRecord->id,
+                    'answer' => $studentProvidedAnswer,
                     'is_correct' => $isCorrect,
-                    'score' => $score,
+                    'marks_obtained' => $marksObtainedForThisAnswer,
                 ]);
+            } else {
+                // Log if there's a mismatch, which could indicate issues with exam data integrity
+                \Illuminate\Support\Facades\Log::warning(
+                    "Mismatch or missing question data during exam submission. ".
+                    "Exam ID: {$exam->id}, Requested Question Index: {$questionIndex}. " .
+                    "JSON Definition Found: " . ($questionDefinitionFromJson ? 'Yes' : 'No') . ". " .
+                    "DB ExamQuestion Record Found: " . ($examQuestionRecord ? 'Yes' : 'No')
+                );
+            }
+        }
+
+        // Calculate total possible marks for the exam from the questions definitions
+        $calculatedTotalPossibleMarks = 0;
+        foreach ($questions as $questionDefinition) {
+            if (isset($questionDefinition['marks']) && is_numeric($questionDefinition['marks'])) {
+                $calculatedTotalPossibleMarks += $questionDefinition['marks'];
             }
         }
 
@@ -344,9 +372,11 @@ class ExamController extends Controller
         $attempt = StudentExamAttempt::create([
             'exam_id' => $exam->id,
             'student_id' => $user->id,
-            'submission_time' => now(),
-            'total_score' => $totalScore,
-            'passed' => $totalScore >= $exam->passing_marks,
+            'start_time' => $exam->start_time,
+            'submit_time' => now(),
+            'total_marks_obtained' => $totalScore,
+            'total_possible_marks' => $calculatedTotalPossibleMarks,
+            'status' => 'submitted',
         ]);
 
         return response()->json([

@@ -77,7 +77,6 @@ class NotificationController extends Controller
                 'receiver_type' => 'user',
                 'type' => $request->type,
                 'reference_id' => $request->reference_id,
-                'is_read' => false,
             ]);
             
             $notifications[] = $notification;
@@ -97,7 +96,6 @@ class NotificationController extends Controller
                     'role' => $request->role,
                     'type' => $request->type,
                     'reference_id' => $request->reference_id,
-                    'is_read' => false,
                 ]);
                 
                 $notifications[] = $notification;
@@ -116,7 +114,6 @@ class NotificationController extends Controller
                     'group_id' => $group->id,
                     'type' => $request->type,
                     'reference_id' => $request->reference_id,
-                    'is_read' => false,
                 ]);
                 
                 $notifications[] = $notification;
@@ -134,7 +131,6 @@ class NotificationController extends Controller
                     'receiver_type' => 'all',
                     'type' => $request->type,
                     'reference_id' => $request->reference_id,
-                    'is_read' => false,
                 ]);
                 
                 $notifications[] = $notification;
@@ -169,8 +165,8 @@ class NotificationController extends Controller
         }
 
         // Mark as read if not already read
-        if (!$notification->is_read) {
-            $notification->update(['is_read' => true]);
+        if (!$notification->read_at) {
+            $notification->update(['read_at' => now()]);
         }
 
         return response()->json([
@@ -213,7 +209,7 @@ class NotificationController extends Controller
     {
         $user = Auth::user();
         $count = Notification::where('receiver_id', $user->id)
-            ->where('is_read', false)
+            ->whereNull('read_at')
             ->count();
 
         return response()->json([
@@ -241,7 +237,7 @@ class NotificationController extends Controller
             ], 403);
         }
 
-        $notification->update(['is_read' => true]);
+        $notification->update(['read_at' => now()]);
 
         return response()->json([
             'status' => 'success',
@@ -259,8 +255,8 @@ class NotificationController extends Controller
         $user = Auth::user();
         
         Notification::where('receiver_id', $user->id)
-            ->where('is_read', false)
-            ->update(['is_read' => true]);
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
 
         return response()->json([
             'status' => 'success',

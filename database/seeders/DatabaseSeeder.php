@@ -41,6 +41,7 @@ class DatabaseSeeder extends Seeder
         $this->command->info('📝 إنشاء الامتحانات والدرجات...');
         $this->call([
             ExamSeeder::class,
+            ExamQuestionSeeder::class,
             GradeSeeder::class,
         ]);
 
